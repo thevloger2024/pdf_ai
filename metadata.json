@@ -1,0 +1,6 @@
+{
+  "name": "PDF AI",
+  "description": "The ultimate tool for processing, compressing, splitting, and analyzing PDFs quickly, securely, and seamlessly directly in your browser.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
