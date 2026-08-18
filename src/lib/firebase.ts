@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence, indexedDBLocalPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
@@ -8,6 +8,16 @@ import firebaseConfig from '../../firebase-applet-config.json';
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
+// Attempt to set persistence globally before any auth state changes occur.
+// This ensures that if local storage is available, the session persists across tab closes and browsers.
+// If blocked (like in a secure iframe or strict incognito), it gracefully degrades to inMemory.
+setPersistence(auth, indexedDBLocalPersistence)
+  .catch(() => setPersistence(auth, browserLocalPersistence))
+  .catch((e) => {
+    console.warn("Storage restricted, falling back to inMemory persistence.", e);
+    return setPersistence(auth, inMemoryPersistence);
+  });
+
 // Use the specific firestoreDatabaseId
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
@@ -15,17 +25,6 @@ export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
-  try {
-    await setPersistence(auth, browserLocalPersistence);
-  } catch (e) { 
-    console.warn("Local persistence error (likely iframe/incognito), falling back to inMemory:", e); 
-    try {
-      await setPersistence(auth, inMemoryPersistence);
-    } catch (inMemError) {
-      console.warn("InMemory persistence error:", inMemError);
-    }
-  }
-
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return await handleAuthResult(result.user);

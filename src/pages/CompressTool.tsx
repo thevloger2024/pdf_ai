@@ -29,6 +29,8 @@ export default function CompressTool({ user }: { user: User | null }) {
   }, [type]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [targetSize, setTargetSize] = useState<number>(1);
+  const [unit, setUnit] = useState<'MB' | 'KB'>('MB');
   const [result, setResult] = useState<{ url: string, name: string, oldSize: number, newSize: number } | null>(null);
 
   useKeyboardShortcuts({
@@ -72,11 +74,13 @@ export default function CompressTool({ user }: { user: User | null }) {
       const baseFilename = file.name;
 
       if (type === 'jpg' || type === 'png') {
+        const targetMB = unit === 'MB' ? targetSize : targetSize / 1024;
         const options = {
-          maxSizeMB: 1, // Compress to ~1MB or lower
-          maxWidthOrHeight: 1920,
+          maxSizeMB: targetMB,
+          maxWidthOrHeight: 2560,
           useWebWorker: true,
-          fileType: toolInfo.mime
+          fileType: toolInfo.mime,
+          initialQuality: 0.8
         };
         const compressedFile = await imageCompression(file, options);
         await handleResult(compressedFile, baseFilename, file.size);
