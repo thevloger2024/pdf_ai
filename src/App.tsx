@@ -12,6 +12,7 @@ import { FileText, MessageSquare, Settings, UserCircle, LogOut, ArrowLeft, Refre
 import { Toaster, toast } from 'react-hot-toast';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { TourGuide } from './components/TourGuide';
+import { DesktopNavigation } from './components/Navigation';
 import { SplashScreen } from './components/SplashScreen';
 
 // Lazy loaded Pages to drastically improve initial load time and login speed
@@ -71,8 +72,11 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
       await loginWithGoogle();
       toast.success('Successfully logged in!');
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error('Failed to log in. Please try again.');
+      console.error(error);
+      if (error.code === 'auth/popup-blocked') {
+        toast.error('Login popup was blocked by the browser. Please allow popups or open in a new tab.', { duration: 6000 });
+      } else if (error.code !== 'auth/popup-closed-by-user') {
+        toast.error('Failed to log in. If you are in a preview frame, try opening the app in a new tab.', { duration: 6000 });
       }
     }
   };
@@ -95,15 +99,11 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             PDF AI
           </Link>
           
-          <nav id="nav-tour-tools" className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><HomeIcon className="w-4 h-4" />{t('nav.home')}</Link>
-            <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><RefreshCw className="w-4 h-4" />{t('nav.convert')}</Link>
-            <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileMinus className="w-4 h-4" />{t('nav.compress')}</Link>
-            <Link to="/merge-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Combine className="w-4 h-4" />Merge</Link>
-            <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><SplitSquareHorizontal className="w-4 h-4" />{t('nav.split')}</Link>
-            <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileDown className="w-4 h-4" />{t('nav.chunk')}</Link>
-            <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileEdit className="w-4 h-4" />{t('nav.edit')}</Link>
-            <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Droplets className="w-4 h-4" />{t('nav.watermark')}</Link>
+          <div id="nav-tour-tools" className="hidden md:flex items-center">
+            <DesktopNavigation />
+          </div>
+          
+          <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600 dark:text-slate-300">
             {user?.role === 'admin' && (
               <Link to="/admin" className="flex items-center gap-1 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded-full">
                 <Settings className="h-4 w-4" /> Admin
@@ -112,7 +112,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             <button onClick={toggleDarkMode} className="p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Toggle Dark Mode">
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-          </nav>
+          </div>
 
           <div className="flex items-center gap-4">
             {!loading && (
@@ -163,19 +163,19 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
         {isMobileMenuOpen && (
           <div className="md:hidden absolute w-full left-0 top-16 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg shadow-black/5">
             <nav className="flex flex-col px-4 py-4 gap-4 text-base font-medium text-slate-600 dark:text-slate-300 max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" />{t('nav.home')}</Link>
-              <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" />{t('nav.convert')}</Link>
-              <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" />{t('nav.compress')}</Link>
-              <Link to="/merge-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Combine className="w-5 h-5" />Merge</Link>
-              <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" />{t('nav.split')}</Link>
-              <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
-              <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
-              <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" />{t('nav.home')}</Link>
+              <Link to="/convert" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" />{t('nav.convert')}</Link>
+              <Link to="/compress-hub" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" />{t('nav.compress')}</Link>
+              <Link to="/merge-hub" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Combine className="w-5 h-5" />Merge</Link>
+              <Link to="/split" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" />{t('nav.split')}</Link>
+              <Link to="/chunk" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
+              <Link to="/edit" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
+              <Link to="/watermark" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
               {user && (
-                <Link to="/profile" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><UserCircle className="w-5 h-5" />Profile</Link>
+                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><UserCircle className="w-5 h-5" />Profile</Link>
               )}
               {user?.role === 'admin' && (
-                <Link to="/admin" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                   <Settings className="h-5 w-5" /> Admin
                 </Link>
               )}
@@ -268,8 +268,8 @@ export default function App() {
             <Route path="/compress-hub" element={<CompressHub />} />
             <Route path="/compress-tool/:type" element={<CompressTool user={user} />} />
             <Route path="/merge-hub" element={<MergeHub />} />
-            <Route path="/merge-pdfs" element={<MergePdfs />} />
-            <Route path="/merge-pages" element={<MergePages />} />
+            <Route path="/merge-pdfs" element={<MergePdfs user={user} />} />
+            <Route path="/merge-pages" element={<MergePages user={user} />} />
             <Route path="/split" element={<Split user={user} />} />
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />

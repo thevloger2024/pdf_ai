@@ -3,6 +3,7 @@ import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Download, Loader2, Save, FileText, Share2 } from 'lucide-react';
@@ -141,6 +142,9 @@ export default function Edit({ user }: { user: User | null }) {
           <FileUploader onFileSelect={loadPdfAndExtractText} title="Select PDF" />
         ) : (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white dark:bg-slate-800/90 rounded-3xl p-6 border border-slate-200 dark:border-slate-700/50 shadow-sm">
+            <div className="mb-6 w-full flex justify-center">
+              <PDFPreview file={file} />
+            </div>
             <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-6">
               <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{file.name}</span>
               <button onClick={() => { setFile(null); setExtractedText(''); setResultUrl(null); }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 font-medium">Clear</button>

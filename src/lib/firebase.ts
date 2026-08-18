@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
@@ -15,6 +15,10 @@ export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+  } catch (e) { console.warn("Persistence error:", e); }
+
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;

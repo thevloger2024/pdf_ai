@@ -3,6 +3,7 @@ import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
 import { Download, Loader2, Check, Share2 } from 'lucide-react';
 import { User } from '../types';
@@ -122,6 +123,9 @@ export default function Chunk({ user }: { user: User | null }) {
         <FileUploader onFileSelect={loadPdf} title="Select PDF file" />
       ) : resultUrls.length === 0 ? (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm max-w-md mx-auto">
+          <div className="mb-6 w-full flex justify-center">
+            <PDFPreview file={file} />
+          </div>
           <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-8">
             <span className="font-medium text-slate-700 dark:text-slate-300 truncate mr-4">{file.name}</span>
             <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{pageCount} pages</span>

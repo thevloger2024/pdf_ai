@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Download, Loader2, Check, Share2, Droplets } from 'lucide-react';
 import { User } from '../types';
@@ -199,6 +200,9 @@ export default function Watermark({ user }: { user: User | null }) {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-10 shadow-sm border border-slate-200 dark:border-slate-700"
         >
+          <div className="mb-6 w-full max-w-md mx-auto flex justify-center">
+            <PDFPreview file={file} />
+          </div>
           <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">

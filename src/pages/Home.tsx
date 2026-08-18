@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileDown, FileMinus, FileScan, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets, Combine } from 'lucide-react';
+import { FileDown, FileMinus, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets, Combine, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getHistory, clearHistory, HistoryItem } from '../lib/storage';
 
 const getTools = (t: any) => [
-  { id: 'compress', name: t('tool.compress'), desc: t('tool.compress.desc'), icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress' },
+  { id: 'compress', name: t('tool.compress'), desc: t('tool.compress.desc'), icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress-hub' },
   { id: 'merge', name: 'Merge PDF', desc: 'Combine multiple PDFs or pages into a single document.', icon: Combine, color: 'text-purple-600', bg: 'bg-purple-50', link: '/merge-hub' },
+  { id: 'convert', name: t('nav.convert'), desc: 'Convert files to and from PDF format quickly.', icon: RefreshCw, color: 'text-blue-600', bg: 'bg-blue-50', link: '/convert' },
   { id: 'split', name: t('tool.split'), desc: t('tool.split.desc'), icon: SplitSquareHorizontal, color: 'text-amber-600', bg: 'bg-amber-50', link: '/split' },
-  { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-blue-600', bg: 'bg-blue-50', link: '/chunk' },
-  { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/edit' },
+  { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/chunk' },
+  { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50', link: '/edit' },
   { id: 'watermark', name: t('tool.watermark'), desc: t('tool.watermark.desc'), icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/watermark' },
 ];
 
@@ -75,14 +76,17 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * (i + 1) }}
             >
-              <Link to={tool.link} className="group flex flex-col h-full bg-white dark:bg-slate-800/90 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+              <Link 
+                to={tool.link} 
+                className="group flex flex-col h-full bg-white dark:bg-slate-800/90 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+              >
                 <div className={`w-14 h-14 rounded-xl ${tool.bg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                   <Icon className={`w-7 h-7 ${tool.color}`} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200 mb-2">{tool.name}</h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-6 flex-1">{tool.desc}</p>
                 <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium text-sm mt-auto">
-                  Get Started <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  Open Tool <ArrowRight className="w-4 h-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
             </motion.div>

@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered user profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "User activity log entry for audit and history",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "action"]
+    },
+    "ToolUsageStats": {
+      "title": "ToolUsageStats",
+      "description": "Aggregated tool access counts",
+      "type": "object",
+      "properties": {
+        "pdf": { "type": "number" },
+        "compress": { "type": "number" },
+        "merge": { "type": "number" },
+        "split": { "type": "number" },
+        "chunk": { "type": "number" },
+        "edit": { "type": "number" },
+        "watermark": { "type": "number" },
+        "convert": { "type": "number" }
+      }
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global application configuration and profile settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "skills": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents keyed by Firebase Auth UID"
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Collection of user action events"
+    },
+    "/stats/{statId}": {
+      "schema": "ToolUsageStats",
+      "description": "Global usage metrics and access counters"
+    },
+    "/site_settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Site-wide content configuration"
+    }
+  }
+}

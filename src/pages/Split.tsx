@@ -3,6 +3,7 @@ import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
 import { Download, Loader2, Check, Share2 } from 'lucide-react';
 import { User } from '../types';
@@ -104,6 +105,9 @@ export default function Split({ user }: { user: User | null }) {
         <FileUploader onFileSelect={loadPdf} title="Select PDF file" />
       ) : !resultUrl ? (
         <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm">
+          <div className="mb-8 w-full max-w-sm mx-auto flex justify-center">
+            <PDFPreview file={file} />
+          </div>
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{file.name}</h2>
