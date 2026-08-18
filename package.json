@@ -22,6 +22,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "papaparse": "^5.6.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "pptxgenjs": "^4.0.1",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/papaparse": "^5.5.2",
     "@types/pdfjs-dist": "^2.10.378",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",

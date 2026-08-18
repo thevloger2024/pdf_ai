@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
@@ -17,32 +17,68 @@ const googleProvider = new GoogleAuthProvider();
 export const loginWithGoogle = async () => {
   try {
     await setPersistence(auth, browserLocalPersistence);
-  } catch (e) { console.warn("Persistence error:", e); }
+  } catch (e) { 
+    console.warn("Local persistence error (likely iframe/incognito), falling back to inMemory:", e); 
+    try {
+      await setPersistence(auth, inMemoryPersistence);
+    } catch (inMemError) {
+      console.warn("InMemory persistence error:", inMemError);
+    }
+  }
 
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    
-    try {
-      // Store/Update user in Firestore (Optional, don't break login if it fails)
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        lastLogin: serverTimestamp(),
-        role: user.email === ADMIN_EMAIL ? 'admin' : 'user'
-      }, { merge: true });
-    } catch (dbError) {
-      console.warn("Firestore user sync failed, but login succeeded:", dbError);
+    return await handleAuthResult(result.user);
+  } catch (error: any) {
+    console.error("Popup login error:", error);
+    // If popup is blocked or environment doesn't support it, fallback to redirect
+    if (error.code === 'auth/popup-blocked' || error.message?.includes('popup') || error.code === 'auth/unauthorized-domain') {
+      console.log("Falling back to redirect login...");
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return null;
+      } catch (redirectError: any) {
+        console.error("Redirect fallback also failed:", redirectError);
+        throw new Error('storage-restricted');
+      }
     }
-    
-    return user;
-  } catch (error) {
-    console.error("Error logging in:", error);
     throw error;
   }
+};
+
+export const checkRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      await handleAuthResult(result.user);
+    }
+    return result?.user || null;
+  } catch (error: any) {
+    // Suppress "Database is closing/hidden" error in preview environments
+    if (error?.message?.includes('closing') || error?.message?.includes('hidden')) {
+      console.warn("Redirect result skipped due to restricted storage access in this environment.");
+    } else {
+      console.error("Redirect login error:", error);
+    }
+    return null;
+  }
+};
+
+const handleAuthResult = async (user: FirebaseUser) => {
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      lastLogin: serverTimestamp(),
+      role: user.email === ADMIN_EMAIL ? 'admin' : 'user'
+    }, { merge: true });
+  } catch (dbError) {
+    console.warn("Firestore user sync failed, but login succeeded:", dbError);
+  }
+  return user;
 };
 
 export const logout = () => signOut(auth);

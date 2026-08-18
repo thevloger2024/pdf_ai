@@ -1,0 +1,239 @@
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import SEO from '../components/SEO';
+import { FileUploader } from '../components/FileUploader';
+import { Download, Loader2, FileText, Settings, ArrowLeft } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { saveToHistory } from '../lib/storage';
+import { logActivity, logToolAccess } from '../lib/firebase';
+import { User } from '../types';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
+
+export default function SplitText({ user }: { user: User | null }) {
+  const [searchParams] = useSearchParams();
+  const type = searchParams.get('type') || 'csv';
+  
+  const [file, setFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [splitMethod, setSplitMethod] = useState<'lines' | 'headers'>('lines');
+  const [linesPerFile, setLinesPerFile] = useState<number>(1000);
+  const [results, setResults] = useState<{name: string, url: string}[]>([]);
+
+  useEffect(() => {
+    logToolAccess('split_text_' + type);
+  }, [type]);
+
+  const handleFileSelect = (selectedFile: File) => {
+    setFile(selectedFile);
+    setResults([]);
+  };
+
+  const processSplit = async () => {
+    if (!file) return;
+    setIsProcessing(true);
+    
+    try {
+      const text = await file.text();
+      const newResults: {name: string, url: string}[] = [];
+      const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+
+      if (type === 'md' && splitMethod === 'headers') {
+        const parts = text.split(/(^#+ .*$)/m);
+        let currentPart = parts[0];
+        let fileIndex = 1;
+        
+        for (let i = 1; i < parts.length; i += 2) {
+          const header = parts[i];
+          const content = parts[i+1] || '';
+          
+          if (currentPart.trim()) {
+            const blob = new Blob([currentPart], { type: 'text/markdown' });
+            newResults.push({
+              name: `${baseName}_part${fileIndex}.md`,
+              url: URL.createObjectURL(blob)
+            });
+            fileIndex++;
+          }
+          currentPart = header + content;
+        }
+        
+        if (currentPart.trim()) {
+          const blob = new Blob([currentPart], { type: 'text/markdown' });
+          newResults.push({
+            name: `${baseName}_part${fileIndex}.md`,
+            url: URL.createObjectURL(blob)
+          });
+        }
+      } else {
+        // Split by lines for Text, CSV, Excel
+        const lines = text.split(/\r?\n/);
+        const hasHeader = (type === 'csv' || type === 'excel');
+        const headerLine = hasHeader && lines.length > 0 ? lines[0] : '';
+        const startIdx = hasHeader ? 1 : 0;
+        
+        let chunkIndex = 1;
+        for (let i = startIdx; i < lines.length; i += linesPerFile) {
+          const chunkLines = lines.slice(i, i + linesPerFile);
+          if (chunkLines.length === 0 || (chunkLines.length === 1 && !chunkLines[0])) continue;
+          
+          if (hasHeader) {
+            chunkLines.unshift(headerLine);
+          }
+          
+          if (type === 'excel') {
+            // Convert to Excel
+            const parsed = Papa.parse(chunkLines.join('\n'), { skipEmptyLines: true });
+            const worksheet = XLSX.utils.aoa_to_sheet(parsed.data as any[][]);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            newResults.push({
+              name: `${baseName}_part${chunkIndex}.xlsx`,
+              url: URL.createObjectURL(blob)
+            });
+          } else {
+            // CSV or TXT
+            const ext = type === 'md' ? 'md' : 'csv';
+            const content = chunkLines.join('\n');
+            const blob = new Blob([content], { type: 'text/plain' });
+            newResults.push({
+              name: `${baseName}_part${chunkIndex}.${ext}`,
+              url: URL.createObjectURL(blob)
+            });
+          }
+          chunkIndex++;
+        }
+      }
+      
+      setResults(newResults);
+      if (user) {
+        logActivity(user.uid, 'split_text', { type, filesGenerated: newResults.length });
+      }
+      toast.success(`Split into ${newResults.length} files!`);
+      
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to split file');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getTitle = () => {
+    if (type === 'excel') return 'Split to Excel';
+    if (type === 'md') return 'Split Markdown';
+    return 'Split Text/CSV';
+  };
+
+  const downloadAll = () => {
+    results.forEach(res => {
+      const a = document.createElement('a');
+      a.href = res.url;
+      a.download = res.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+    toast.success('Downloads started!');
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-12 md:py-20">
+      <SEO title={`${getTitle()} - PDF AI`} description="Split large text, CSV, or Markdown files easily." />
+      
+      <div className="text-center mb-12">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-200 mb-4">{getTitle()}</h1>
+        <p className="text-slate-600 dark:text-slate-400">Upload your file and choose how you want to split it.</p>
+      </div>
+
+      {!file ? (
+        <FileUploader onFileSelect={handleFileSelect} title={`Select File`} />
+      ) : results.length === 0 ? (
+        <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm max-w-2xl mx-auto">
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100 dark:border-slate-700">
+            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{file.name}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{(file.size / 1024).toFixed(2)} KB</p>
+            </div>
+          </div>
+          
+          <div className="space-y-6 mb-8">
+            {type === 'md' && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Split Method</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={splitMethod === 'lines'} onChange={() => setSplitMethod('lines')} className="text-blue-600" />
+                    <span className="text-slate-700 dark:text-slate-300">By Lines</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={splitMethod === 'headers'} onChange={() => setSplitMethod('headers')} className="text-blue-600" />
+                    <span className="text-slate-700 dark:text-slate-300">By Headers</span>
+                  </label>
+                </div>
+              </div>
+            )}
+            
+            {splitMethod === 'lines' && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Lines per file</label>
+                <input 
+                  type="number" 
+                  value={linesPerFile} 
+                  onChange={(e) => setLinesPerFile(Number(e.target.value) || 1000)}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                  min="1"
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-4">
+            <button onClick={() => setFile(null)} className="flex-1 py-3 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors">
+              Cancel
+            </button>
+            <button 
+              onClick={processSplit}
+              disabled={isProcessing}
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex justify-center items-center gap-2"
+            >
+              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Settings className="w-5 h-5" />}
+              {isProcessing ? 'Processing...' : 'Split File'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200">Generated Files ({results.length})</h2>
+            <button onClick={downloadAll} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" /> Download All
+            </button>
+          </div>
+          
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+            {results.map((res, i) => (
+              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate mr-4" title={res.name}>{res.name}</span>
+                <a href={res.url} download={res.name} className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  <Download className="w-4 h-4" />
+                </a>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
+            <button onClick={() => {setFile(null); setResults([]);}} className="text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center justify-center gap-2 mx-auto">
+              <ArrowLeft className="w-4 h-4" /> Split Another File
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

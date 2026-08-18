@@ -12,7 +12,7 @@ import { sharePdf } from '../lib/utils';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
 
-export default function Split({ user }: { user: User | null }) {
+export default function SplitPdf({ user }: { user: User | null }) {
   useEffect(() => {
     logToolAccess('split');
   }, []);

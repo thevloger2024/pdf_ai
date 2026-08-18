@@ -45,18 +45,25 @@ export default function Profile({ user }: { user: User | null }) {
     async function fetchLogs() {
       if (!user) return;
       try {
+        // Removed orderBy to prevent composite index requirement. 
+        // We will sort them in memory.
         const q = query(
           collection(db, 'activity_logs'),
           where('userId', '==', user.uid),
-          orderBy('timestamp', 'desc'),
-          limit(30)
+          limit(100)
         );
         const querySnapshot = await getDocs(q);
         const fetchedLogs: ActivityLog[] = [];
         querySnapshot.forEach((doc) => {
           fetchedLogs.push({ id: doc.id, ...doc.data() } as ActivityLog);
         });
-        setLogs(fetchedLogs);
+        // Sort in memory by timestamp descending
+        fetchedLogs.sort((a, b) => {
+          const timeA = a.timestamp?.seconds || 0;
+          const timeB = b.timestamp?.seconds || 0;
+          return timeB - timeA;
+        });
+        setLogs(fetchedLogs.slice(0, 30));
       } catch (error) {
         console.error("Error fetching logs:", error);
       } finally {

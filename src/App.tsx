@@ -6,7 +6,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, formatUser, loginWithGoogle, logout } from './lib/firebase';
+import { auth, formatUser, loginWithGoogle, checkRedirectResult, logout } from './lib/firebase';
 import { User } from './types';
 import { FileText, MessageSquare, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets, Combine } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
@@ -18,7 +18,9 @@ import { SplashScreen } from './components/SplashScreen';
 // Lazy loaded Pages to drastically improve initial load time and login speed
 const Home = React.lazy(() => import('./pages/Home'));
 const Compress = React.lazy(() => import('./pages/Compress'));
-const Split = React.lazy(() => import('./pages/Split'));
+const SplitHub = React.lazy(() => import('./pages/SplitHub'));
+const SplitPdf = React.lazy(() => import('./pages/SplitPdf'));
+const SplitText = React.lazy(() => import('./pages/SplitText'));
 const Chunk = React.lazy(() => import('./pages/Chunk'));
 const Edit = React.lazy(() => import('./pages/Edit'));
 const Watermark = React.lazy(() => import('./pages/Watermark'));
@@ -75,8 +77,10 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
       console.error(error);
       if (error.code === 'auth/popup-blocked') {
         toast.error('Login popup was blocked by the browser. Please allow popups or open in a new tab.', { duration: 6000 });
+      } else if (error.message === 'storage-restricted' || error.message?.includes('closing') || error.message?.includes('hidden')) {
+        toast.error('Third-party cookies/storage are blocked. Please open the app in a new tab to log in.', { duration: 8000 });
       } else if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error('Failed to log in. If you are in a preview frame, try opening the app in a new tab.', { duration: 6000 });
+        toast.error('Failed to log in. Try opening the app in a new tab if you are in preview.', { duration: 6000 });
       }
     }
   };
@@ -245,6 +249,11 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // Check for redirect result on mount
+    checkRedirectResult().then((user) => {
+      if (user) toast.success('Successfully logged in!');
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(formatUser(firebaseUser));
       setLoading(false);
@@ -270,7 +279,9 @@ export default function App() {
             <Route path="/merge-hub" element={<MergeHub />} />
             <Route path="/merge-pdfs" element={<MergePdfs user={user} />} />
             <Route path="/merge-pages" element={<MergePages user={user} />} />
-            <Route path="/split" element={<Split user={user} />} />
+            <Route path="/split" element={<SplitHub />} />
+            <Route path="/split-pdf" element={<SplitPdf user={user} />} />
+            <Route path="/split-text" element={<SplitText user={user} />} />
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />
             <Route path="/watermark" element={<Watermark user={user} />} />
