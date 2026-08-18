@@ -26,16 +26,20 @@ export const loginWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     
-    // Store/Update user in Firestore
-    const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      lastLogin: serverTimestamp(),
-      role: user.email === ADMIN_EMAIL ? 'admin' : 'user'
-    }, { merge: true });
+    try {
+      // Store/Update user in Firestore (Optional, don't break login if it fails)
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        lastLogin: serverTimestamp(),
+        role: user.email === ADMIN_EMAIL ? 'admin' : 'user'
+      }, { merge: true });
+    } catch (dbError) {
+      console.warn("Firestore user sync failed, but login succeeded:", dbError);
+    }
     
     return user;
   } catch (error) {

@@ -8,10 +8,11 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, formatUser, loginWithGoogle, logout } from './lib/firebase';
 import { User } from './types';
-import { FileText, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets } from 'lucide-react';
+import { FileText, MessageSquare, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { TourGuide } from './components/TourGuide';
+import { SplashScreen } from './components/SplashScreen';
 
 // Lazy loaded Pages to drastically improve initial load time and login speed
 const Home = React.lazy(() => import('./pages/Home'));
@@ -213,6 +214,18 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
           </div>
         </div>
       </footer>
+
+      {/* Floating Feedback Button */}
+      <a
+        href="mailto:thevloger2024@gmail.com?subject=Feedback%20for%20PDF%20AI"
+        className="fixed bottom-6 right-6 z-50 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 transition-all duration-200 flex items-center justify-center group"
+        title="Send Feedback"
+      >
+        <MessageSquare className="w-6 h-6" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 ease-in-out font-medium">
+          Feedback
+        </span>
+      </a>
     </div>
   );
 }
@@ -220,6 +233,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -233,6 +247,7 @@ export default function App() {
     <Router>
       <LanguageProvider>
       <Toaster position="top-right" />
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <TourGuide />
       <Layout user={user} loading={loading}>
         <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" /></div>}>
