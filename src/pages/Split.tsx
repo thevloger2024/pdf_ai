@@ -1,17 +1,21 @@
 import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
 import { PDFDocument } from 'pdf-lib';
 import { Download, Loader2, Check, Share2 } from 'lucide-react';
 import { User } from '../types';
-import { logActivity } from '../lib/firebase';
+import { logActivity, logToolAccess } from '../lib/firebase';
 import { sharePdf } from '../lib/utils';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
 
 export default function Split({ user }: { user: User | null }) {
+  useEffect(() => {
+    logToolAccess('split');
+  }, []);
+
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState<number>(0);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);

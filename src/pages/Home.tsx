@@ -1,19 +1,22 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileDown, FileMinus, FileScan, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2 } from 'lucide-react';
+import { FileDown, FileMinus, FileScan, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { getHistory, clearHistory, HistoryItem } from '../lib/storage';
 
-const tools = [
-  { id: 'compress', name: 'Compress PDF', desc: 'Reduce file size while optimizing for maximal PDF quality.', icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress' },
-  { id: 'split', name: 'Split PDF', desc: 'Extract pages from your PDF or save each page as a separate PDF.', icon: SplitSquareHorizontal, color: 'text-amber-600', bg: 'bg-amber-50', link: '/split' },
-  { id: 'chunk', name: 'Chunk PDF', desc: 'Split a large PDF into multiple smaller files of X pages each.', icon: FileDown, color: 'text-blue-600', bg: 'bg-blue-50', link: '/chunk' },
-  { id: 'edit', name: 'Edit Text', desc: 'Add or modify text in your PDF document effortlessly.', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/edit' },
-  { id: 'analyze', name: 'AI Insights', desc: 'Use Gemini AI to analyze your PDF or image instantly.', icon: FileScan, color: 'text-purple-600', bg: 'bg-purple-50', link: '/analyze' },
+const getTools = (t: any) => [
+  { id: 'compress', name: t('tool.compress'), desc: t('tool.compress.desc'), icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress' },
+  { id: 'split', name: t('tool.split'), desc: t('tool.split.desc'), icon: SplitSquareHorizontal, color: 'text-amber-600', bg: 'bg-amber-50', link: '/split' },
+  { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-blue-600', bg: 'bg-blue-50', link: '/chunk' },
+  { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/edit' },
+  { id: 'watermark', name: t('tool.watermark'), desc: t('tool.watermark.desc'), icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/watermark' },
+  { id: 'analyze', name: t('tool.analyze'), desc: t('tool.analyze.desc'), icon: FileScan, color: 'text-purple-600', bg: 'bg-purple-50', link: '/analyze' },
 ];
 
 export default function Home() {
+  const { t } = useLanguage();
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-slate-200 tracking-tight mb-6"
         >
-          Every tool you need to work with PDFs
+          {t('home.title')}
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0, y: 20 }}
@@ -58,12 +61,12 @@ export default function Home() {
           transition={{ delay: 0.1 }}
           className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed"
         >
-          All are 100% FREE and easy to use! Merge, split, compress, edit, and analyze your PDFs with just a few clicks. Fast, secure, and right in your browser.
+          {t('home.subtitle')}
         </motion.p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((tool, i) => {
+        {getTools(t).map((tool, i) => {
           const Icon = tool.icon;
           return (
             <motion.div
@@ -127,7 +130,7 @@ export default function Home() {
                     <button
                       onClick={() => downloadHistoryItem(item)}
                       className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Download again"
+                      title={t('home.downloadAgain')}
                     >
                       <Download className="w-5 h-5" />
                     </button>

@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
 
@@ -68,5 +68,16 @@ export const logActivity = async (userId: string, action: string, details: any =
     });
   } catch (error) {
     console.error("Failed to log activity", error);
+  }
+};
+
+export const logToolAccess = async (toolId: string) => {
+  try {
+    const statsRef = doc(db, 'stats', 'toolUsage');
+    await setDoc(statsRef, {
+      [toolId]: increment(1)
+    }, { merge: true });
+  } catch (error) {
+    console.error("Failed to log tool access", error);
   }
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SEO from '../components/SEO';
 import { useParams, Navigate } from 'react-router-dom';
 import { Loader2, Check } from 'lucide-react';
@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
 import { toast } from 'react-hot-toast';
 import { User } from '../types';
-import { logActivity } from '../lib/firebase';
+import { logActivity, logToolAccess } from '../lib/firebase';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
 import imageCompression from 'browser-image-compression';
@@ -21,7 +21,12 @@ const compressors = {
 };
 
 export default function CompressTool({ user }: { user: User | null }) {
+
+
   const { type } = useParams<{ type: string }>();
+  useEffect(() => {
+    if (type) logToolAccess('compress_' + type);
+  }, [type]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<{ url: string, name: string, oldSize: number, newSize: number } | null>(null);

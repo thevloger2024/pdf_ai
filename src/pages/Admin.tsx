@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { User } from '../types';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Users, Activity, Settings, Database, Loader2, Code, Image as ImageIcon } from 'lucide-react';
+import { Users, Activity, Settings, Database, Loader2, Code, Image as ImageIcon, BarChart } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -12,7 +12,8 @@ export default function Admin({ user }: { user: User | null }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'overview' | 'users' | 'activity' | 'developer'>('overview');
+  const [toolStats, setToolStats] = useState<Record<string, number>>({});
+  const [tab, setTab] = useState<'overview' | 'users' | 'activity' | 'developer' | 'stats'>('overview');
 
   // Developer Profile State
   const [devProfile, setDevProfile] = useState({ 
@@ -37,6 +38,11 @@ export default function Admin({ user }: { user: User | null }) {
       try {
         const logsQ = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50));
         const logsSnapshot = await getDocs(logsQ);
+        
+        const statsDoc = await getDoc(doc(db, 'stats', 'toolUsage'));
+        if (statsDoc.exists()) {
+          setToolStats(statsDoc.data() as Record<string, number>);
+        }
         setLogs(logsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
 
         const usersQ = query(collection(db, 'users'), limit(50));
@@ -129,6 +135,13 @@ export default function Admin({ user }: { user: User | null }) {
         <button onClick={() => setTab('activity')} className={`px-6 py-3 rounded-full font-medium transition-colors flex items-center gap-2 ${tab === 'activity' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <Activity className="w-4 h-4" /> Activity Logs
         </button>
+          <button
+            onClick={() => setTab('stats')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${tab === 'stats' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+          >
+            <BarChart className="w-5 h-5" />
+            <span className="font-medium">Tool Stats</span>
+          </button>
         <button onClick={() => setTab('developer')} className={`px-6 py-3 rounded-full font-medium transition-colors flex items-center gap-2 ${tab === 'developer' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <Code className="w-4 h-4" /> Developer Profile
         </button>
@@ -215,6 +228,24 @@ export default function Admin({ user }: { user: User | null }) {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {tab === 'stats' && (
+            <div className="p-8">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200 mb-6">Tool Usage Statistics</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(toolStats).sort((a,b) => b[1] - a[1]).map(([tool, count]) => (
+                  <div key={tool} className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200 capitalize">{tool.replace('_', ' ')}</h3>
+                    <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{count}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Total visits/usages</p>
+                  </div>
+                ))}
+                {Object.keys(toolStats).length === 0 && (
+                  <p className="text-slate-500 dark:text-slate-400 col-span-full">No tool usage data found yet.</p>
+                )}
+              </div>
             </div>
           )}
 

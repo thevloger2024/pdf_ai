@@ -4,6 +4,7 @@ import { Upload, File as FileIcon, X, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'react-hot-toast';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function FileUploader({ 
   onFileSelect, 
@@ -17,6 +18,9 @@ export function FileUploader({
   subtitle?: string
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const { t } = useLanguage();
+  const safeTitle = title === 'Choose file' ? t('upload.choose') : title;
+  const safeSubtitle = subtitle === 'or drop files here' ? t('upload.drop') : subtitle;
   const [isGlobalDragging, setIsGlobalDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,8 +125,8 @@ export function FileUploader({
               <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 animate-bounce">
                 <Upload className="w-12 h-12 text-white" />
               </div>
-              <h2 className="text-4xl font-bold mb-2">Drop your file here</h2>
-              <p className="text-blue-100 text-lg">We support {accept.replace(/\./g, '').toUpperCase()}</p>
+              <h2 className="text-4xl font-bold mb-2">{t('upload.dropping')}</h2>
+              <p className="text-blue-100 text-lg">{t('upload.support')} {accept.replace(/\./g, '').toUpperCase()}</p>
             </motion.div>
           </motion.div>
         )}
@@ -149,8 +153,8 @@ export function FileUploader({
         <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
           <Upload className="w-8 h-8" />
         </div>
-        <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">{title}</h3>
-        <p className="text-slate-500 dark:text-slate-400">{subtitle}</p>
+        <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">{safeTitle}</h3>
+        <p className="text-slate-500 dark:text-slate-400">{safeSubtitle}</p>
       </div>
     </>
   );

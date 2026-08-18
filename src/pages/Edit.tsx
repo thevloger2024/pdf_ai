@@ -7,7 +7,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Download, Loader2, Save, FileText, Share2 } from 'lucide-react';
 import { User } from '../types';
-import { logActivity } from '../lib/firebase';
+import { logActivity, logToolAccess } from '../lib/firebase';
 import { sharePdf } from '../lib/utils';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
@@ -16,6 +16,10 @@ import { saveToHistory } from '../lib/storage';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 export default function Edit({ user }: { user: User | null }) {
+  useEffect(() => {
+    logToolAccess('edit');
+  }, []);
+
   const [file, setFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [isExtracting, setIsExtracting] = useState(false);

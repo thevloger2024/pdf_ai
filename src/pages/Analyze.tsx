@@ -1,15 +1,19 @@
 import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
 import { Bot, Loader2, FileScan } from 'lucide-react';
 import { User } from '../types';
-import { logActivity } from '../lib/firebase';
+import { logActivity, logToolAccess } from '../lib/firebase';
 import ReactMarkdown from 'react-markdown';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function Analyze({ user }: { user: User | null }) {
+  useEffect(() => {
+    logToolAccess('analyze');
+  }, []);
+
   const [file, setFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState('Please summarize the key points of this document.');
   const [isThinking, setIsThinking] = useState(false);

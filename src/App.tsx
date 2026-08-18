@@ -8,8 +8,10 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, formatUser, loginWithGoogle, logout } from './lib/firebase';
 import { User } from './types';
-import { FileText, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X } from 'lucide-react';
+import { FileText, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { TourGuide } from './components/TourGuide';
 
 // Lazy loaded Pages to drastically improve initial load time and login speed
 const Home = React.lazy(() => import('./pages/Home'));
@@ -17,6 +19,7 @@ const Compress = React.lazy(() => import('./pages/Compress'));
 const Split = React.lazy(() => import('./pages/Split'));
 const Chunk = React.lazy(() => import('./pages/Chunk'));
 const Edit = React.lazy(() => import('./pages/Edit'));
+const Watermark = React.lazy(() => import('./pages/Watermark'));
 const Analyze = React.lazy(() => import('./pages/Analyze'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const StaticPage = React.lazy(() => import('./pages/StaticPage'));
@@ -27,6 +30,7 @@ const CompressHub = React.lazy(() => import('./pages/CompressHub'));
 const CompressTool = React.lazy(() => import('./pages/CompressTool'));
 
 function Layout({ children, user, loading }: { children: React.ReactNode, user: User | null, loading: boolean }) {
+  const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -87,14 +91,15 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             PDF AI
           </Link>
           
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><HomeIcon className="w-4 h-4" /> Home</Link>
-            <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><RefreshCw className="w-4 h-4" /> Convert</Link>
-            <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileMinus className="w-4 h-4" /> Compress</Link>
-            <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><SplitSquareHorizontal className="w-4 h-4" /> Split</Link>
-            <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileDown className="w-4 h-4" /> Chunk</Link>
-            <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileEdit className="w-4 h-4" /> Edit</Link>
-            <Link to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> AI Insights</Link>
+          <nav id="nav-tour-tools" className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+            <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><HomeIcon className="w-4 h-4" />{t('nav.home')}</Link>
+            <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><RefreshCw className="w-4 h-4" />{t('nav.convert')}</Link>
+            <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileMinus className="w-4 h-4" />{t('nav.compress')}</Link>
+            <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><SplitSquareHorizontal className="w-4 h-4" />{t('nav.split')}</Link>
+            <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileDown className="w-4 h-4" />{t('nav.chunk')}</Link>
+            <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileEdit className="w-4 h-4" />{t('nav.edit')}</Link>
+            <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Droplets className="w-4 h-4" />{t('nav.watermark')}</Link>
+            <Link id="nav-tour-ai" to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Sparkles className="w-4 h-4" />{t('nav.analyze')}</Link>
             {user?.role === 'admin' && (
               <Link to="/admin" className="flex items-center gap-1 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded-full">
                 <Settings className="h-4 w-4" /> Admin
@@ -122,6 +127,9 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
                   <button onClick={toggleDarkMode} className="md:hidden p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Toggle Dark Mode">
                     {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                   </button>
+                  <button onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} className="md:hidden p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('lang.toggle')}>
+                    <Languages className="h-5 w-5" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
@@ -131,10 +139,14 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
                   <button onClick={toggleDarkMode} className="md:hidden p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Toggle Dark Mode">
                     {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                   </button>
+                  <button onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} className="md:hidden p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('lang.toggle')}>
+                    <Languages className="h-5 w-5" />
+                  </button>
                 </div>
               )
             )}
             <button 
+              id="nav-tour-mobile-menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
               className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ml-1"
             >
@@ -147,13 +159,14 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
         {isMobileMenuOpen && (
           <div className="md:hidden absolute w-full left-0 top-16 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg shadow-black/5">
             <nav className="flex flex-col px-4 py-4 gap-4 text-base font-medium text-slate-600 dark:text-slate-300 max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" /> Home</Link>
-              <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" /> Convert</Link>
-              <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" /> Compress</Link>
-              <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" /> Split</Link>
-              <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" /> Chunk</Link>
-              <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" /> Edit</Link>
-              <Link to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Sparkles className="w-5 h-5" /> AI Insights</Link>
+              <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" />{t('nav.home')}</Link>
+              <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" />{t('nav.convert')}</Link>
+              <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" />{t('nav.compress')}</Link>
+              <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" />{t('nav.split')}</Link>
+              <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
+              <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
+              <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
+              <Link id="nav-tour-ai" to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Sparkles className="w-5 h-5" />{t('nav.analyze')}</Link>
               {user?.role === 'admin' && (
                 <Link to="/admin" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                   <Settings className="h-5 w-5" /> Admin
@@ -199,7 +212,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             </Link>
           </div>
           <div className="text-sm text-slate-400 dark:text-slate-500">
-            &copy; {new Date().getFullYear()} PDF AI. All rights reserved.
+            &copy; {new Date().getFullYear()} {t('footer.rights')}
           </div>
         </div>
       </footer>
@@ -221,7 +234,9 @@ export default function App() {
 
   return (
     <Router>
+      <LanguageProvider>
       <Toaster position="top-right" />
+      <TourGuide />
       <Layout user={user} loading={loading}>
         <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" /></div>}>
           <Routes>
@@ -234,6 +249,7 @@ export default function App() {
             <Route path="/split" element={<Split user={user} />} />
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />
+            <Route path="/watermark" element={<Watermark user={user} />} />
             <Route path="/analyze" element={<Analyze user={user} />} />
             <Route path="/admin" element={<Admin user={user} />} />
             <Route path="/developer" element={<Developer />} />
@@ -243,6 +259,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </Layout>
+      </LanguageProvider>
     </Router>
   );
 }

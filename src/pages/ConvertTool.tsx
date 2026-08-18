@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
 import { Download, Loader2, RefreshCw, Share2 } from 'lucide-react';
 import { User } from '../types';
-import { logActivity } from '../lib/firebase';
+import { logActivity, logToolAccess } from '../lib/firebase';
 import { sharePdf } from '../lib/utils';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
@@ -29,7 +29,12 @@ const types: Record<string, { name: string, ext: string, mime: string, accepted?
 };
 
 export default function ConvertTool({ user }: { user: User | null }) {
+
+
   const { type } = useParams<{ type: string }>();
+  useEffect(() => {
+    if (type) logToolAccess('convert_' + type);
+  }, [type]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<{ url: string, name: string } | null>(null);
