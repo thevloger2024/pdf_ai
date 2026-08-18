@@ -12,7 +12,6 @@ const getTools = (t: any) => [
   { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-blue-600', bg: 'bg-blue-50', link: '/chunk' },
   { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/edit' },
   { id: 'watermark', name: t('tool.watermark'), desc: t('tool.watermark.desc'), icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/watermark' },
-  { id: 'analyze', name: t('tool.analyze'), desc: t('tool.analyze.desc'), icon: FileScan, color: 'text-purple-600', bg: 'bg-purple-50', link: '/analyze' },
 ];
 
 export default function Home() {

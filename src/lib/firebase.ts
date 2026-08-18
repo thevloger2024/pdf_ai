@@ -5,18 +5,18 @@ import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDn2wZj3RjCBzWHKvt_RO1quvfnWtM8tq8",
-  authDomain: "tera-rookery-r98sv.firebaseapp.com",
-  projectId: "tera-rookery-r98sv",
-  storageBucket: "tera-rookery-r98sv.firebasestorage.app",
-  messagingSenderId: "274842973423",
-  appId: "1:274842973423:web:c0b032fbc5ec87a997171a",
+  apiKey: "AIzaSyAzvfAKfU5smjr405uWTOXhPfHnYpZmRQ0",
+  authDomain: "pdf-ai-fin.firebaseapp.com",
+  projectId: "pdf-ai-fin",
+  storageBucket: "pdf-ai-fin.firebasestorage.app",
+  messagingSenderId: "984493970435",
+  appId: "1:984493970435:web:144220359baae82a2eaa36",
 };
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 // Use the specific firestoreDatabaseId if needed, but getFirestore default is fine unless explicitly multi-DB.
-export const db = getFirestore(app, "ai-studio-7761470c-3409-40d6-9834-e02a01b2b653");
+export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 const googleProvider = new GoogleAuthProvider();

@@ -20,7 +20,6 @@ const Split = React.lazy(() => import('./pages/Split'));
 const Chunk = React.lazy(() => import('./pages/Chunk'));
 const Edit = React.lazy(() => import('./pages/Edit'));
 const Watermark = React.lazy(() => import('./pages/Watermark'));
-const Analyze = React.lazy(() => import('./pages/Analyze'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const StaticPage = React.lazy(() => import('./pages/StaticPage'));
 const Convert = React.lazy(() => import('./pages/Convert'));
@@ -99,7 +98,6 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileDown className="w-4 h-4" />{t('nav.chunk')}</Link>
             <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileEdit className="w-4 h-4" />{t('nav.edit')}</Link>
             <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Droplets className="w-4 h-4" />{t('nav.watermark')}</Link>
-            <Link id="nav-tour-ai" to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Sparkles className="w-4 h-4" />{t('nav.analyze')}</Link>
             {user?.role === 'admin' && (
               <Link to="/admin" className="flex items-center gap-1 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded-full">
                 <Settings className="h-4 w-4" /> Admin
@@ -166,7 +164,6 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
               <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
               <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
               <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
-              <Link id="nav-tour-ai" to="/analyze" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Sparkles className="w-5 h-5" />{t('nav.analyze')}</Link>
               {user?.role === 'admin' && (
                 <Link to="/admin" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                   <Settings className="h-5 w-5" /> Admin
@@ -250,7 +247,6 @@ export default function App() {
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />
             <Route path="/watermark" element={<Watermark user={user} />} />
-            <Route path="/analyze" element={<Analyze user={user} />} />
             <Route path="/admin" element={<Admin user={user} />} />
             <Route path="/developer" element={<Developer />} />
             <Route path="/about" element={<StaticPage title="About Us" content="Welcome to PDF AI. The ultimate tool for processing PDFs quickly, securely, and seamlessly directly in your browser." />} />

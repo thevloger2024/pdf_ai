@@ -10,11 +10,6 @@ const steps = [
     content: 'Convert, compress, split, and edit your PDFs right from here.',
   },
   {
-    targetId: 'nav-tour-ai',
-    title: 'AI Insights',
-    content: 'Leverage Gemini AI to summarize, extract, and analyze your documents.',
-  },
-  {
     targetId: 'nav-tour-mobile-menu',
     title: 'Navigation Menu',
     content: 'Access all your tools and settings from this menu.',
