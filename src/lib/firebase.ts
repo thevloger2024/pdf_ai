@@ -3,20 +3,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { ADMIN_EMAIL, User } from '../types';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAzvfAKfU5smjr405uWTOXhPfHnYpZmRQ0",
-  authDomain: "pdf-ai-fin.firebaseapp.com",
-  projectId: "pdf-ai-fin",
-  storageBucket: "pdf-ai-fin.firebasestorage.app",
-  messagingSenderId: "984493970435",
-  appId: "1:984493970435:web:144220359baae82a2eaa36",
-};
+import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-// Use the specific firestoreDatabaseId if needed, but getFirestore default is fine unless explicitly multi-DB.
-export const db = getFirestore(app);
+
+// Use the specific firestoreDatabaseId
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
 
 const googleProvider = new GoogleAuthProvider();

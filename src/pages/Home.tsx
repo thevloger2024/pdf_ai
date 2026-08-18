@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileDown, FileMinus, FileScan, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets } from 'lucide-react';
+import { FileDown, FileMinus, FileScan, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets, Combine } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,6 +8,7 @@ import { getHistory, clearHistory, HistoryItem } from '../lib/storage';
 
 const getTools = (t: any) => [
   { id: 'compress', name: t('tool.compress'), desc: t('tool.compress.desc'), icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress' },
+  { id: 'merge', name: 'Merge PDF', desc: 'Combine multiple PDFs or pages into a single document.', icon: Combine, color: 'text-purple-600', bg: 'bg-purple-50', link: '/merge-hub' },
   { id: 'split', name: t('tool.split'), desc: t('tool.split.desc'), icon: SplitSquareHorizontal, color: 'text-amber-600', bg: 'bg-amber-50', link: '/split' },
   { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-blue-600', bg: 'bg-blue-50', link: '/chunk' },
   { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/edit' },

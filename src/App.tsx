@@ -8,7 +8,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, formatUser, loginWithGoogle, logout } from './lib/firebase';
 import { User } from './types';
-import { FileText, MessageSquare, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets } from 'lucide-react';
+import { FileText, MessageSquare, Settings, UserCircle, LogOut, ArrowLeft, RefreshCw, Loader2, Moon, Sun, Info, Lock, Phone, User as UserIcon, Home as HomeIcon, FileMinus, SplitSquareHorizontal, FileDown, FileEdit, Sparkles, Menu, X, Languages, Droplets, Combine } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { TourGuide } from './components/TourGuide';
@@ -28,6 +28,10 @@ const ConvertTool = React.lazy(() => import('./pages/ConvertTool'));
 const Developer = React.lazy(() => import('./pages/Developer'));
 const CompressHub = React.lazy(() => import('./pages/CompressHub'));
 const CompressTool = React.lazy(() => import('./pages/CompressTool'));
+const MergeHub = React.lazy(() => import('./pages/MergeHub'));
+const MergePdfs = React.lazy(() => import('./pages/MergePdfs'));
+const MergePages = React.lazy(() => import('./pages/MergePages'));
+const Profile = React.lazy(() => import('./pages/Profile'));
 
 function Layout({ children, user, loading }: { children: React.ReactNode, user: User | null, loading: boolean }) {
   const { t, language, setLanguage } = useLanguage();
@@ -95,6 +99,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><HomeIcon className="w-4 h-4" />{t('nav.home')}</Link>
             <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><RefreshCw className="w-4 h-4" />{t('nav.convert')}</Link>
             <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileMinus className="w-4 h-4" />{t('nav.compress')}</Link>
+            <Link to="/merge-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><Combine className="w-4 h-4" />Merge</Link>
             <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><SplitSquareHorizontal className="w-4 h-4" />{t('nav.split')}</Link>
             <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileDown className="w-4 h-4" />{t('nav.chunk')}</Link>
             <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"><FileEdit className="w-4 h-4" />{t('nav.edit')}</Link>
@@ -113,13 +118,13 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
             {!loading && (
               user ? (
                 <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-2">
+                  <Link to="/profile" className="hidden sm:flex items-center gap-2 hover:opacity-80 transition-opacity" title="View Profile">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700" referrerPolicy="no-referrer" />
                     ) : (
                       <UserCircle className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                     )}
-                  </div>
+                  </Link>
                   <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors" title="Log out">
                     <LogOut className="h-5 w-5" />
                   </button>
@@ -161,10 +166,14 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
               <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" />{t('nav.home')}</Link>
               <Link to="/convert" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" />{t('nav.convert')}</Link>
               <Link to="/compress-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" />{t('nav.compress')}</Link>
+              <Link to="/merge-hub" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Combine className="w-5 h-5" />Merge</Link>
               <Link to="/split" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" />{t('nav.split')}</Link>
               <Link to="/chunk" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
               <Link to="/edit" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
               <Link to="/watermark" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
+              {user && (
+                <Link to="/profile" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><UserCircle className="w-5 h-5" />Profile</Link>
+              )}
               {user?.role === 'admin' && (
                 <Link to="/admin" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                   <Settings className="h-5 w-5" /> Admin
@@ -258,11 +267,15 @@ export default function App() {
             <Route path="/compress" element={<Compress user={user} />} />
             <Route path="/compress-hub" element={<CompressHub />} />
             <Route path="/compress-tool/:type" element={<CompressTool user={user} />} />
+            <Route path="/merge-hub" element={<MergeHub />} />
+            <Route path="/merge-pdfs" element={<MergePdfs />} />
+            <Route path="/merge-pages" element={<MergePages />} />
             <Route path="/split" element={<Split user={user} />} />
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />
             <Route path="/watermark" element={<Watermark user={user} />} />
             <Route path="/admin" element={<Admin user={user} />} />
+            <Route path="/profile" element={<Profile user={user} />} />
             <Route path="/developer" element={<Developer />} />
             <Route path="/about" element={<StaticPage title="About Us" content="Welcome to PDF AI. The ultimate tool for processing PDFs quickly, securely, and seamlessly directly in your browser." />} />
             <Route path="/privacy" element={<StaticPage title="Privacy Policy" content="Your privacy is paramount. Most of our tools run directly in your browser meaning your files never leave your device unless using our AI features. Files uploaded for AI analysis are processed securely and not retained." />} />
