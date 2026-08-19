@@ -20,6 +20,7 @@ export default function SplitPdf({ user }: { user: User | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState<number>(0);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
+  const [previewPage, setPreviewPage] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
@@ -106,7 +107,7 @@ export default function SplitPdf({ user }: { user: User | null }) {
       ) : !resultUrl ? (
         <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm">
           <div className="mb-8 w-full max-w-sm mx-auto flex justify-center">
-            <PDFPreview file={file} />
+            <PDFPreview file={file} pageNumber={previewPage} />
           </div>
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
@@ -126,7 +127,8 @@ export default function SplitPdf({ user }: { user: User | null }) {
                 <button
                   key={page}
                   onClick={() => togglePage(page)}
-                  className={`relative aspect-[1/1.4] rounded-lg border-2 flex items-center justify-center transition-all ${
+                  onMouseEnter={() => setPreviewPage(page)}
+                  className={`relative aspect-[1/1.4] rounded-lg border-2 flex items-center justify-center transition-all overflow-hidden ${
                     isSelected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
@@ -156,8 +158,11 @@ export default function SplitPdf({ user }: { user: User | null }) {
         </div>
       ) : (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm text-center max-w-md mx-auto">
-          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check className="w-10 h-10" />
+          <div className="mb-6 w-full max-w-sm mx-auto flex justify-center">
+            <PDFPreview file={resultUrl} />
+          </div>
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200 mb-2">Extraction Complete!</h2>
           <p className="text-slate-500 dark:text-slate-400 mb-8">Created a new PDF with {selectedPages.length} pages.</p>

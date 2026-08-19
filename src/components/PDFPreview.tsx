@@ -7,7 +7,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-export function PDFPreview({ file }: { file: File }) {
+export function PDFPreview({ file, pageNumber = 1 }: { file: File | Blob | string, pageNumber?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export function PDFPreview({ file }: { file: File }) {
 
     const renderPage = async () => {
       if (!file) return;
-      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      if (file instanceof File && !file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
         setError('Not a PDF file');
         setLoading(false);
         return;
@@ -28,10 +28,19 @@ export function PDFPreview({ file }: { file: File }) {
       setError(null);
 
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        let pdfData;
+        if (typeof file === 'string') {
+          const response = await fetch(file);
+          pdfData = await response.arrayBuffer();
+        } else {
+          pdfData = await file.arrayBuffer();
+        }
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
+        
+        // Ensure page is within bounds
+        const validPageNum = Math.min(Math.max(1, pageNumber), pdf.numPages);
+        const page = await pdf.getPage(validPageNum);
         
         if (!isMounted) return;
 
@@ -79,7 +88,7 @@ export function PDFPreview({ file }: { file: File }) {
         } catch (e) {}
       }
     };
-  }, [file]);
+  }, [file, pageNumber]);
 
   if (error) {
     return (

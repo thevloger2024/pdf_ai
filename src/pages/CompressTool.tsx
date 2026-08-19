@@ -121,7 +121,7 @@ export default function CompressTool({ user }: { user: User | null }) {
       }
     } catch (error) {
       console.error(error);
-      toast.error(`Failed to compress ${toolInfo.name} file.`);
+      toast.error(`Failed to compress ${toolInfo.name} file. The file may be corrupted or encrypted.`);
     } finally {
       setIsProcessing(false);
     }

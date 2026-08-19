@@ -160,7 +160,10 @@ export default function Compress({ user }: { user: User | null }) {
             </div>
           ) : (
             <div className="text-center max-w-md mx-auto">
-              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="mb-6 w-full flex justify-center">
+              <PDFPreview file={result.url} />
+            </div>
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Check className="w-10 h-10" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200 mb-2">Compression Complete!</h2>
