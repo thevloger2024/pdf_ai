@@ -29,6 +29,7 @@ export default function CompressTool({ user }: { user: User | null }) {
   }, [type]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [targetSize, setTargetSize] = useState<number>(1);
   const [unit, setUnit] = useState<'MB' | 'KB'>('MB');
   const [result, setResult] = useState<{ url: string, name: string, oldSize: number, newSize: number } | null>(null);
@@ -73,6 +74,7 @@ export default function CompressTool({ user }: { user: User | null }) {
     try {
       const baseFilename = file.name;
 
+      setProgress(0);
       if (type === 'jpg' || type === 'png') {
         const targetMB = unit === 'MB' ? targetSize : targetSize / 1024;
         const options = {
@@ -80,13 +82,16 @@ export default function CompressTool({ user }: { user: User | null }) {
           maxWidthOrHeight: 2560,
           useWebWorker: true,
           fileType: toolInfo.mime,
-          initialQuality: 0.8
+          initialQuality: 0.8,
+          onProgress: (p: number) => setProgress(p)
         };
         const compressedFile = await imageCompression(file, options);
         await handleResult(compressedFile, baseFilename, file.size);
         
       } else if (type === 'md') {
+        setProgress(50);
         const text = await file.text();
+        setProgress(100);
         // Minify markdown: remove excessive newlines and trailing spaces
         const minified = text.replace(/\\n{3,}/g, '\\n\\n').replace(/[ \\t]+$/gm, '');
         const blob = new Blob([minified], { type: toolInfo.mime });
@@ -104,6 +109,8 @@ export default function CompressTool({ user }: { user: User | null }) {
           compressionOptions: {
             level: 9
           }
+        }, (metadata) => {
+          setProgress(metadata.percent);
         });
         
         await handleResult(compressedBlob, baseFilename, file.size);
@@ -178,18 +185,34 @@ export default function CompressTool({ user }: { user: User | null }) {
             <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatSize(file.size)}</span>
           </div>
 
-          <div className="flex gap-4">
-            <button onClick={() => setFile(null)} className="flex-1 px-6 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 transition-colors">
-              Cancel
-            </button>
-            <button 
-              onClick={handleCompress} 
-              disabled={isProcessing}
-              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Compress File'}
-            </button>
-          </div>
+          {isProcessing ? (
+            <div className="w-full pt-2">
+              <div className="flex justify-between text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
+                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" /> Compressing...</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                <motion.div
+                  className="bg-blue-600 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.2 }}
+                ></motion.div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-4 w-full">
+              <button onClick={() => setFile(null)} className="flex-1 px-6 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button 
+                onClick={handleCompress} 
+                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+              >
+                Compress File
+              </button>
+            </div>
+          )}
         </motion.div>
       ) : (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm max-w-2xl mx-auto">
