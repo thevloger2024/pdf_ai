@@ -2,6 +2,10 @@ import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripHorizontal } from 'lucide-react';
 import { FileUploader } from '../components/FileUploader';
 import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
@@ -12,6 +16,38 @@ import { sharePdf } from '../lib/utils';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { saveToHistory } from '../lib/storage';
 
+
+function SortableGridItem({ id, page, isSelected, onClick, onMouseEnter }: { id: string, page: number, isSelected: boolean, onClick: () => void, onMouseEnter: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group touch-none">
+      <button
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        className={`w-full relative aspect-[1/1.4] rounded-lg border-2 flex items-center justify-center transition-all overflow-hidden ${
+          isSelected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+        } ${isDragging ? 'shadow-xl scale-105 border-blue-400' : ''}`}
+      >
+        <span className={`font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>{page}</span>
+        {isSelected && (
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center border-2 border-white z-10">
+            <Check className="w-3 h-3" />
+          </div>
+        )}
+      </button>
+      <div 
+        {...attributes} 
+        {...listeners} 
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing shadow-sm border border-slate-200 dark:border-slate-700"
+      >
+        <GripHorizontal className="w-4 h-4" />
+      </div>
+    </div>
+  );
+}
+
 export default function SplitPdf({ user }: { user: User | null }) {
   useEffect(() => {
     logToolAccess('split');
@@ -19,6 +55,7 @@ export default function SplitPdf({ user }: { user: User | null }) {
 
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState<number>(0);
+  const [pagesOrder, setPagesOrder] = useState<string[]>([]);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [previewPage, setPreviewPage] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -51,7 +88,9 @@ export default function SplitPdf({ user }: { user: User | null }) {
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      setPageCount(pdfDoc.getPageCount());
+      const count = pdfDoc.getPageCount();
+      setPageCount(count);
+      setPagesOrder(Array.from({length: count}, (_, i) => String(i + 1)));
       // Select all by default or none
     } catch (e) {
       console.error(e);
@@ -62,8 +101,25 @@ export default function SplitPdf({ user }: { user: User | null }) {
 
   const togglePage = (page: number) => {
     setSelectedPages(prev => 
-      prev.includes(page) ? prev.filter(p => p !== page) : [...prev, page].sort((a, b) => a - b)
+      prev.includes(page) ? prev.filter(p => p !== page) : [...prev, page]
     );
+  };
+
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setPagesOrder((items) => {
+        const oldIndex = items.indexOf(String(active.id));
+        const newIndex = items.indexOf(String(over.id));
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleExtract = async () => {
@@ -74,7 +130,8 @@ export default function SplitPdf({ user }: { user: User | null }) {
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const newPdf = await PDFDocument.create();
       
-      const copiedPages = await newPdf.copyPages(pdfDoc, selectedPages.map(p => p - 1));
+      const orderedSelectedPages = pagesOrder.map(Number).filter(p => selectedPages.includes(p));
+      const copiedPages = await newPdf.copyPages(pdfDoc, orderedSelectedPages.map(p => p - 1));
       copiedPages.forEach(page => newPdf.addPage(page));
       
       const pdfBytes = await newPdf.save();
@@ -115,34 +172,31 @@ export default function SplitPdf({ user }: { user: User | null }) {
               <p className="text-sm text-slate-500 dark:text-slate-400">{pageCount} pages total</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setSelectedPages(Array.from({length: pageCount}, (_, i) => i + 1))} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 rounded-lg transition-colors">Select All</button>
+              <button onClick={() => setSelectedPages(pagesOrder.map(Number))} className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 rounded-lg transition-colors">Select All</button>
               <button onClick={() => setSelectedPages([])} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 rounded-lg transition-colors">Clear</button>
             </div>
           </div>
 
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4 mb-8 max-h-[50vh] overflow-y-auto p-2">
-            {Array.from({length: pageCount}, (_, i) => i + 1).map(page => {
-              const isSelected = selectedPages.includes(page);
-              return (
-                <button
-                  key={page}
-                  onClick={() => togglePage(page)}
-                  onMouseEnter={() => setPreviewPage(page)}
-                  className={`relative aspect-[1/1.4] rounded-lg border-2 flex items-center justify-center transition-all overflow-hidden ${
-                    isSelected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <span className={`font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>{page}</span>
-                  {isSelected && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center border-2 border-white">
-                      <Check className="w-3 h-3" />
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={pagesOrder} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4 mb-8 max-h-[50vh] overflow-y-auto p-2">
+                {pagesOrder.map(id => {
+                  const page = Number(id);
+                  const isSelected = selectedPages.includes(page);
+                  return (
+                    <SortableGridItem 
+                      key={id} 
+                      id={id} 
+                      page={page} 
+                      isSelected={isSelected} 
+                      onClick={() => togglePage(page)} 
+                      onMouseEnter={() => setPreviewPage(page)} 
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
           <div className="flex justify-between items-center pt-6 border-t border-slate-100 dark:border-slate-800">
             <button onClick={() => setFile(null)} className="px-6 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 rounded-xl font-medium transition-colors">
               Cancel

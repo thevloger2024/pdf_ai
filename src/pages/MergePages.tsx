@@ -3,14 +3,61 @@ import SEO from '../components/SEO';
 import { Layers, Upload, X, ArrowUp, ArrowDown, File as FileIcon, Loader2 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { motion } from 'motion/react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { saveToHistory } from '../lib/storage';
 import { logActivity } from '../lib/firebase';
 import { User } from '../types';
 
 interface FileWithPages {
+  id: string;
   file: File;
   pageRange: string;
+}
+
+
+function SortablePageItem({ id, item, onRemove, onRangeChange }: { id: string, item: any, onRemove: () => void, onRangeChange: (val: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border ${isDragging ? 'border-pink-500 shadow-md' : 'border-slate-100 dark:border-slate-700/50'} relative`}>
+      <div className="flex items-center gap-3 flex-1 overflow-hidden">
+        <button {...attributes} {...listeners} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-5 h-5" />
+        </button>
+        <div className="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-lg shrink-0">
+          <FileIcon className="w-5 h-5" />
+        </div>
+        <div className="truncate min-w-0">
+          <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.file.name}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+        <div className="flex-1 sm:w-48">
+          <input 
+            type="text" 
+            value={item.pageRange}
+            onChange={(e) => onRangeChange(e.target.value)}
+            // Prevent pointer events to bubble up when typing so DND doesn't interfere with input focus
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            placeholder="e.g. 1, 3, 5-10"
+            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onRemove} className="p-1.5 text-red-400 hover:text-red-600 ml-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function MergePages({ user }: { user: User | null }) {
@@ -48,19 +95,7 @@ export default function MergePages({ user }: { user: User | null }) {
     });
   };
 
-  const moveFile = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
-      const newFiles = [...files];
-      [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
-      setFiles(newFiles);
-    } else if (direction === 'down' && index < files.length - 1) {
-      const newFiles = [...files];
-      [newFiles[index + 1], newFiles[index]] = [newFiles[index], newFiles[index + 1]];
-      setFiles(newFiles);
-    }
-  };
-
-  const parsePageRange = (rangeStr: string, totalPages: number): number[] => {
+    const parsePageRange = (rangeStr: string, totalPages: number): number[] => {
     if (!rangeStr || rangeStr.trim().toLowerCase() === 'all') {
       return Array.from({ length: totalPages }, (_, i) => i);
     }
@@ -82,6 +117,23 @@ export default function MergePages({ user }: { user: User | null }) {
       }
     }
     return Array.from(pages).sort((a, b) => a - b);
+  };
+
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setFiles((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleMerge = async () => {
@@ -182,48 +234,21 @@ export default function MergePages({ user }: { user: User | null }) {
                 </button>
               </div>
 
-              <div className="space-y-4 mb-8">
-                {files.map((item, index) => (
-                  <div key={`${item.file.name}-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    
-                    <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                      <div className="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-lg shrink-0">
-                        <FileIcon className="w-5 h-5" />
-                      </div>
-                      <div className="truncate min-w-0">
-                        <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.file.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-                      <div className="flex-1 sm:w-48">
-                        <input 
-                          type="text" 
-                          value={item.pageRange}
-                          onChange={(e) => updatePageRange(index, e.target.value)}
-                          placeholder="e.g. 1, 3, 5-10"
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none"
-                        />
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => moveFile(index, 'up')} disabled={index === 0} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30">
-                          <ArrowUp className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => moveFile(index, 'down')} disabled={index === files.length - 1} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30">
-                          <ArrowDown className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => removeFile(index)} className="p-1.5 text-red-400 hover:text-red-600 ml-1">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={files.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-4 mb-8">
+                    {files.map((item) => (
+                      <SortablePageItem 
+                        key={item.id} 
+                        id={item.id} 
+                        item={item} 
+                        onRemove={() => removeFile(item.id)} 
+                        onRangeChange={(val) => updatePageRange(item.id, val)}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
-
+                </SortableContext>
+              </DndContext>
               <button
                 onClick={handleMerge}
                 disabled={isProcessing}

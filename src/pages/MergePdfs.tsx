@@ -8,8 +8,36 @@ import { saveToHistory } from '../lib/storage';
 import { logActivity } from '../lib/firebase';
 import { User } from '../types';
 
+
+function SortableFileItem({ id, file, onRemove }: { id: string, file: File, onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border ${isDragging ? 'border-purple-500 shadow-md' : 'border-slate-100 dark:border-slate-700/50'} relative`}>
+      <div className="flex items-center gap-3 overflow-hidden">
+        <button {...attributes} {...listeners} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-5 h-5" />
+        </button>
+        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
+          <FileIcon className="w-5 h-5" />
+        </div>
+        <div className="truncate">
+          <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MergePdfs({ user }: { user: User | null }) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<{id: string, file: File}[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultName, setResultName] = useState<string>('merged.pdf');
@@ -20,7 +48,7 @@ export default function MergePdfs({ user }: { user: User | null }) {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
       if (newFiles.length > 0) {
-        setFiles(prev => [...prev, ...newFiles]);
+        setFiles(prev => [...prev, ...newFiles.map(f => ({ id: Math.random().toString(36).substring(7), file: f }))]);
         toast.success(`Added ${newFiles.length} file(s)`);
       } else {
         toast.error('Only PDF files are allowed.');
@@ -32,15 +60,20 @@ export default function MergePdfs({ user }: { user: User | null }) {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const moveFile = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
-      const newFiles = [...files];
-      [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
-      setFiles(newFiles);
-    } else if (direction === 'down' && index < files.length - 1) {
-      const newFiles = [...files];
-      [newFiles[index + 1], newFiles[index]] = [newFiles[index], newFiles[index + 1]];
-      setFiles(newFiles);
+    
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setFiles((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   };
 
@@ -54,8 +87,8 @@ export default function MergePdfs({ user }: { user: User | null }) {
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const file of files) {
-        const arrayBuffer = await file.arrayBuffer();
+      for (const item of files) {
+        const arrayBuffer = await item.file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
         copiedPages.forEach((page) => {
@@ -68,7 +101,7 @@ export default function MergePdfs({ user }: { user: User | null }) {
       const url = URL.createObjectURL(blob);
       setResultUrl(url);
       
-      const newName = `merged_${files[0].name.replace('.pdf', '')}_and_${files.length - 1}_others.pdf`;
+      const newName = `merged_${files[0].file.name.replace('.pdf', '')}_and_${files.length - 1}_others.pdf`;
       setResultName(newName);
 
       await saveToHistory(newName, blob, 'merge');
@@ -130,44 +163,15 @@ export default function MergePdfs({ user }: { user: User | null }) {
                 </button>
               </div>
 
-              <div className="space-y-3 mb-8">
-                {files.map((file, index) => (
-                  <div key={`${file.name}-${index}`} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
-                        <FileIcon className="w-5 h-5" />
-                      </div>
-                      <div className="truncate">
-                        <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button 
-                        onClick={() => moveFile(index, 'up')} 
-                        disabled={index === 0}
-                        className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 transition-colors"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => moveFile(index, 'down')} 
-                        disabled={index === files.length - 1}
-                        className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 transition-colors"
-                      >
-                        <ArrowDown className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => removeFile(index)}
-                        className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-2"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={files.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3 mb-8">
+                    {files.map((item) => (
+                      <SortableFileItem key={item.id} id={item.id} file={item.file} onRemove={() => removeFile(item.id)} />
+                    ))}
                   </div>
-                ))}
-              </div>
-
+                </SortableContext>
+              </DndContext>
               <button
                 onClick={handleMerge}
                 disabled={isProcessing || files.length < 2}
