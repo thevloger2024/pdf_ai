@@ -1,94 +1,56 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import { Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
 ).toString();
 
-export function PDFPreview({ file, pageNumber = 1 }: { file: File | Blob | string, pageNumber?: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+interface PDFPreviewProps {
+  file: File | Blob | string | null;
+  pageNumber?: number;
+  showControls?: boolean;
+}
+
+export function PDFPreview({ file, pageNumber = 1, showControls = false }: PDFPreviewProps) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(pageNumber);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    let renderTask: any = null;
+  // Sync internal page state with prop if it changes
+  React.useEffect(() => {
+    setCurrentPage(pageNumber);
+  }, [pageNumber]);
 
-    const renderPage = async () => {
-      if (!file) return;
-      if (file instanceof File && !file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-        setError('Not a PDF file');
-        setLoading(false);
-        return;
-      }
+  if (!file) return null;
 
-      setLoading(true);
-      setError(null);
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+  }
 
-      try {
-        let pdfData;
-        if (typeof file === 'string') {
-          const response = await fetch(file);
-          pdfData = await response.arrayBuffer();
-        } else {
-          pdfData = await file.arrayBuffer();
-        }
-        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-        const pdf = await loadingTask.promise;
-        
-        // Ensure page is within bounds
-        const validPageNum = Math.min(Math.max(1, pageNumber), pdf.numPages);
-        const page = await pdf.getPage(validPageNum);
-        
-        if (!isMounted) return;
+  function onDocumentLoadError(error: Error) {
+    console.error("PDF Render Error:", error);
+    setError('Failed to load PDF preview');
+    setLoading(false);
+  }
 
-        const viewport = page.getViewport({ scale: 1.0 });
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        
-        const context = canvas.getContext('2d');
-        if (!context) return;
-        
-        // Scale down to fit standard container widths if needed, but pdf renders at fixed scale
-        const desiredWidth = 400; // max width
-        let scale = desiredWidth / viewport.width;
-        if (scale > 1) scale = 1;
-        
-        const scaledViewport = page.getViewport({ scale });
-        
-        canvas.height = scaledViewport.height;
-        canvas.width = scaledViewport.width;
-        
-        const renderContext: any = {
-          canvasContext: context,
-          viewport: scaledViewport
-        };
-        
-        renderTask = page.render(renderContext);
-        await renderTask.promise;
-      } catch (err) {
-        console.error("PDF Render Error:", err);
-        if (isMounted) {
-          setError('Failed to generate preview');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+  const handlePrevious = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
 
-    renderPage();
-
-    return () => {
-      isMounted = false;
-      if (renderTask) {
-        try {
-          renderTask.cancel();
-        } catch (e) {}
-      }
-    };
-  }, [file, pageNumber]);
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentPage(prev => Math.min(prev + 1, numPages || 1));
+  };
 
   if (error) {
     return (
@@ -99,17 +61,53 @@ export function PDFPreview({ file, pageNumber = 1 }: { file: File | Blob | strin
   }
 
   return (
-    <div className="relative w-full flex items-center justify-center bg-slate-100 dark:bg-slate-900/50 rounded-xl overflow-hidden min-h-[200px] p-4 border border-slate-200 dark:border-slate-800">
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+    <div className="flex flex-col items-center w-full max-w-full">
+      <div className="relative flex items-center justify-center bg-slate-100 dark:bg-slate-900/50 rounded-xl overflow-hidden min-h-[200px] border border-slate-200 dark:border-slate-800 w-full">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 rounded-xl">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        )}
+        <div className="max-w-full overflow-hidden p-4 flex justify-center">
+          <Document
+            file={file}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={null}
+            className="flex justify-center max-w-full"
+          >
+            <Page
+              pageNumber={currentPage}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              className="max-w-full shadow-md rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-white flex justify-center"
+              width={Math.min(window.innerWidth - 64, 400)}
+            />
+          </Document>
+        </div>
+      </div>
+      
+      {showControls && numPages && numPages > 1 && (
+        <div className="flex items-center gap-4 mt-4 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={handlePrevious}
+            disabled={currentPage <= 1}
+            className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 dark:text-slate-300 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-400 min-w-[4rem] text-center">
+            {currentPage} / {numPages}
+          </span>
+          <button
+            onClick={handleNext}
+            disabled={currentPage >= numPages}
+            className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 dark:text-slate-300 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       )}
-      <canvas 
-        ref={canvasRef} 
-        className="max-w-full h-auto rounded shadow-md border border-slate-200 dark:border-slate-700 bg-white"
-        style={{ opacity: loading ? 0.5 : 1 }}
-      />
     </div>
   );
 }
