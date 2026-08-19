@@ -40,8 +40,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     if (saved) {
       return saved === 'dark';
@@ -49,10 +48,6 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -79,6 +74,8 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
         toast.error('Login popup was blocked by the browser. Please allow popups or open in a new tab.', { duration: 6000 });
       } else if (error.message === 'storage-restricted' || error.message?.includes('closing') || error.message?.includes('hidden')) {
         toast.error('Third-party cookies/storage are blocked. Please open the app in a new tab to log in.', { duration: 8000 });
+      } else if (error.code === 'auth/unauthorized-domain') {
+        toast.error('Sign-in failed: Domain not authorized. Add this URL to Firebase Console > Authentication > Settings > Authorized Domains.', { duration: 10000 });
       } else if (error.code !== 'auth/popup-closed-by-user') {
         toast.error('Failed to log in. Try opening the app in a new tab if you are in preview.', { duration: 6000 });
       }
@@ -121,7 +118,7 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
           <div className="flex items-center gap-4">
             {!loading && (
               user ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 md:gap-3">
                   <Link to="/profile" className="hidden sm:flex items-center gap-2 hover:opacity-80 transition-opacity" title="View Profile">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt="Profile" className="h-8 w-8 rounded-full border border-slate-200 dark:border-slate-700" referrerPolicy="no-referrer" />
@@ -140,8 +137,8 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <button onClick={handleLogin} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-colors shadow-sm">
+                <div className="flex items-center gap-1.5 md:gap-3">
+                  <button onClick={handleLogin} className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full font-medium text-xs md:text-sm transition-colors shadow-sm">
                     Sign In
                   </button>
                   <button onClick={toggleDarkMode} className="md:hidden p-2 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Toggle Dark Mode">
@@ -153,40 +150,11 @@ function Layout({ children, user, loading }: { children: React.ReactNode, user: 
                 </div>
               )
             )}
-            <button 
-              id="nav-tour-mobile-menu"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
-              className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ml-1"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden absolute w-full left-0 top-16 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg shadow-black/5">
-            <nav className="flex flex-col px-4 py-4 gap-4 text-base font-medium text-slate-600 dark:text-slate-300 max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><HomeIcon className="w-5 h-5" />{t('nav.home')}</Link>
-              <Link to="/convert" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><RefreshCw className="w-5 h-5" />{t('nav.convert')}</Link>
-              <Link to="/compress-hub" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileMinus className="w-5 h-5" />{t('nav.compress')}</Link>
-              <Link to="/merge-hub" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Combine className="w-5 h-5" />Merge</Link>
-              <Link to="/split" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><SplitSquareHorizontal className="w-5 h-5" />{t('nav.split')}</Link>
-              <Link to="/chunk" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileDown className="w-5 h-5" />{t('nav.chunk')}</Link>
-              <Link to="/edit" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><FileEdit className="w-5 h-5" />{t('nav.edit')}</Link>
-              <Link to="/watermark" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><Droplets className="w-5 h-5" />{t('nav.watermark')}</Link>
-              {user && (
-                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"><UserCircle className="w-5 h-5" />Profile</Link>
-              )}
-              {user?.role === 'admin' && (
-                <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
-                  <Settings className="h-5 w-5" /> Admin
-                </Link>
-              )}
-            </nav>
-          </div>
-        )}
-      </header>
+        </header>
 
       <main className="flex-1 w-full flex flex-col">
         {location.pathname !== '/' && (
