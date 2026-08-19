@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'react-hot-toast';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export function FileUploader({ 
   onFileSelect, 
@@ -23,6 +24,13 @@ export function FileUploader({
   const safeSubtitle = subtitle === 'or drop files here' ? t('upload.drop') : subtitle;
   const [isGlobalDragging, setIsGlobalDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useKeyboardShortcuts({
+    onOpen: () => {
+      fileInputRef.current?.click();
+    }
+  });
+
 
   useEffect(() => {
     let dragCounter = 0;

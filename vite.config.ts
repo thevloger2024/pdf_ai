@@ -15,6 +15,26 @@ export default defineConfig(() => {
           enabled: true
         },
         includeAssets: ['icon.svg'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,mjs,wasm}'],
+          maximumFileSizeToCacheInBytes: 10485760, // 10MB to cover large chunks and PDF workers
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
+        },
         manifest: {
           name: 'PDF AI',
           short_name: 'PDF AI',

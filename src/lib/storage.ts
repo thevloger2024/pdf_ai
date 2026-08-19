@@ -9,7 +9,7 @@ export interface HistoryItem {
 }
 
 const HISTORY_KEY_PREFIX = 'history_';
-const MAX_HISTORY = 5;
+const MAX_HISTORY = 100;
 
 export const saveToHistory = async (name: string, blob: Blob, tool: string) => {
   try {

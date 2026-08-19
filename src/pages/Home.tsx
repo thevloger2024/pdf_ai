@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getHistory, clearHistory, HistoryItem } from '../lib/storage';
+import { HistoryModal } from '../components/HistoryModal';
 
 const getTools = (t: any) => [
   { id: 'compress', name: t('tool.compress'), desc: t('tool.compress.desc'), icon: FileMinus, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/compress-hub' },
@@ -19,6 +20,7 @@ const getTools = (t: any) => [
 export default function Home() {
   const { t } = useLanguage();
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -105,17 +107,25 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
               <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Recent Files
             </h2>
-            <button
-              onClick={handleClearHistory}
-              className="text-sm flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-red-600 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" /> Clear History
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="text-sm flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+              >
+                <Clock className="w-4 h-4" /> All History
+              </button>
+              <button
+                onClick={handleClearHistory}
+                className="text-sm flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" /> Clear History
+              </button>
+            </div>
           </div>
           
           <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-sm">
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {history.map((item) => (
+              {history.slice(0, 5).map((item) => (
                 <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center flex-shrink-0">
@@ -145,6 +155,12 @@ export default function Home() {
           </div>
         </motion.div>
       )}
+      <HistoryModal 
+        isOpen={isHistoryModalOpen} 
+        onClose={() => setIsHistoryModalOpen(false)} 
+        history={history} 
+        onClearHistory={handleClearHistory} 
+      />
     </div>
   );
 }
