@@ -2,6 +2,10 @@ import React, { useState, useRef } from 'react';
 import SEO from '../components/SEO';
 import { Combine, Upload, X, ArrowUp, ArrowDown, File as FileIcon, Loader2 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, GripHorizontal } from 'lucide-react';
 import { motion, Reorder } from 'motion/react';
 import { toast } from 'react-hot-toast';
 import { saveToHistory } from '../lib/storage';
@@ -56,8 +60,8 @@ export default function MergePdfs({ user }: { user: User | null }) {
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = (idToRemove: string) => {
+    setFiles(prev => prev.filter(f => f.id !== idToRemove));
   };
 
     
@@ -70,8 +74,8 @@ export default function MergePdfs({ user }: { user: User | null }) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setFiles((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
+        const oldIndex = items.findIndex(item => item.id === String(active.id));
+        const newIndex = items.findIndex(item => item.id === String(over.id));
         return arrayMove(items, oldIndex, newIndex);
       });
     }

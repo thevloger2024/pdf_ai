@@ -1,3 +1,4 @@
+import { PDFPreview } from '../components/PDFPreview';
 import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
@@ -14,6 +15,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 import PptxGenJS from 'pptxgenjs';
 import * as XLSX from 'xlsx';
+import { marked } from 'marked';
 
 // Setup PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -25,7 +27,9 @@ const types: Record<string, { name: string, ext: string, mime: string, accepted?
   ppt: { name: 'PDF to PowerPoint', ext: 'pptx', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', accepted: '.pdf' },
   txt: { name: 'PDF to Text', ext: 'txt', mime: 'text/plain', accepted: '.pdf' },
   md: { name: 'PDF to Markdown', ext: 'md', mime: 'text/markdown', accepted: '.pdf' },
-  excel2md: { name: 'Excel to Markdown', ext: 'md', mime: 'text/markdown', accepted: '.xlsx,.xls' }
+  excel2md: { name: 'Excel to Markdown', ext: 'md', mime: 'text/markdown', accepted: '.xlsx,.xls' },
+  md2json: { name: 'Markdown to JSON', ext: 'json', mime: 'application/json', accepted: '.md,.markdown' },
+  excel2json: { name: 'Excel to JSON', ext: 'json', mime: 'application/json', accepted: '.xlsx,.xls,.csv' }
 };
 
 export default function ConvertTool({ user }: { user: User | null }) {
@@ -80,7 +84,31 @@ export default function ConvertTool({ user }: { user: User | null }) {
       const arrayBuffer = await file.arrayBuffer();
       const baseFilename = file.name.replace(/\.[^/.]+$/, '');
 
-      if (type === 'excel2md') {
+      if (type === 'excel2json') {
+        const wb = XLSX.read(arrayBuffer, { type: 'array' });
+        const resultData = {};
+        
+        wb.SheetNames.forEach(sheetName => {
+          const ws = wb.Sheets[sheetName];
+          resultData[sheetName] = XLSX.utils.sheet_to_json(ws);
+        });
+        
+        // If there's only one sheet, we can just return its array to be cleaner, but returning the mapped object is safer to not lose data.
+        const finalJson = wb.SheetNames.length === 1 ? resultData[wb.SheetNames[0]] : resultData;
+        const jsonBlob = new Blob([JSON.stringify(finalJson, null, 2)], { type: toolInfo.mime });
+        await handleResult(jsonBlob, `${baseFilename}.json`);
+        
+      } else if (type === 'md2json') {
+        const textDecoder = new TextDecoder('utf-8');
+        const mdText = textDecoder.decode(arrayBuffer);
+        
+        // Use marked.lexer to generate a full AST (Abstract Syntax Tree) without losing any data
+        const tokens = marked.lexer(mdText);
+        
+        const jsonBlob = new Blob([JSON.stringify(tokens, null, 2)], { type: toolInfo.mime });
+        await handleResult(jsonBlob, `${baseFilename}.json`);
+        
+      } else if (type === 'excel2md') {
         // Handle Excel to Markdown
         const wb = XLSX.read(arrayBuffer, { type: 'array' });
         let mdText = `# ${baseFilename}\n\n`;

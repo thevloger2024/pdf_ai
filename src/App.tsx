@@ -1,3 +1,4 @@
+import BatchRename from './pages/BatchRename';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -252,6 +253,7 @@ export default function App() {
             <Route path="/split-text" element={<SplitText user={user} />} />
             <Route path="/chunk" element={<Chunk user={user} />} />
             <Route path="/edit" element={<Edit user={user} />} />
+            <Route path="/rename" element={<BatchRename />} />
             <Route path="/watermark" element={<Watermark user={user} />} />
             <Route path="/admin" element={<Admin user={user} />} />
             <Route path="/profile" element={<Profile user={user} />} />

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileDown, FileMinus, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets, Combine, RefreshCw } from 'lucide-react';
+import { FileDown, FileMinus, SplitSquareHorizontal, FileText, ArrowRight, Clock, Download, Trash2, Droplets, Combine, RefreshCw , FolderArchive} from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,6 +15,7 @@ const getTools = (t: any) => [
   { id: 'chunk', name: t('tool.chunk'), desc: t('tool.chunk.desc'), icon: FileDown, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/chunk' },
   { id: 'edit', name: t('tool.edit'), desc: t('tool.edit.desc'), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50', link: '/edit' },
   { id: 'watermark', name: t('tool.watermark'), desc: t('tool.watermark.desc'), icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50', link: '/watermark' },
+  { id: 'rename', name: 'Batch Rename', desc: 'Rename multiple files simultaneously and download as a ZIP.', icon: FolderArchive, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/rename' },
 ];
 
 export default function Home() {

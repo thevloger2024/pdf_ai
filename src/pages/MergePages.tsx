@@ -72,7 +72,7 @@ export default function MergePages({ user }: { user: User | null }) {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files)
         .filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
-        .map(file => ({ file, pageRange: 'all' }));
+        .map(file => ({ id: Math.random().toString(36).substring(7), file, pageRange: 'all' }));
         
       if (newFiles.length > 0) {
         setFiles(prev => [...prev, ...newFiles]);
@@ -83,14 +83,15 @@ export default function MergePages({ user }: { user: User | null }) {
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = (idToRemove: string) => {
+    setFiles(prev => prev.filter(f => f.id !== idToRemove));
   };
 
-  const updatePageRange = (index: number, range: string) => {
+  const updatePageRange = (id: string, range: string) => {
     setFiles(prev => {
       const newFiles = [...prev];
-      newFiles[index].pageRange = range;
+      const index = newFiles.findIndex(f => f.id === id);
+      if (index > -1) newFiles[index].pageRange = range;
       return newFiles;
     });
   };
@@ -129,8 +130,8 @@ export default function MergePages({ user }: { user: User | null }) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setFiles((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
+        const oldIndex = items.findIndex(item => item.id === String(active.id));
+        const newIndex = items.findIndex(item => item.id === String(over.id));
         return arrayMove(items, oldIndex, newIndex);
       });
     }

@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileImage, Presentation, Table, ArrowRight, RefreshCw, FileText } from 'lucide-react';
+import { FileImage, Presentation, Table, ArrowRight, RefreshCw, FileText , FileJson, Database} from 'lucide-react';
 import { motion } from 'motion/react';
 
 const convertTools = [
+  { id: 'md2json', name: 'Markdown to JSON', desc: 'Parse Markdown files into structured JSON without data loss.', icon: FileJson, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', link: '/convert/md2json' },
+  { id: 'excel2json', name: 'Excel to JSON', desc: 'Convert Excel sheets (XLSX) reliably into structured JSON.', icon: Database, color: 'text-lime-600', bg: 'bg-lime-50', link: '/convert/excel2json' },
   { id: 'md', name: 'PDF to Markdown', desc: 'Convert your PDF documents into cleanly formatted Markdown files.', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/convert/md' },
   { id: 'excel2md', name: 'Excel to Markdown', desc: 'Convert Excel sheets (XLSX) into Markdown tables.', icon: Table, color: 'text-teal-600', bg: 'bg-teal-50', link: '/convert/excel2md' },
   { id: 'txt', name: 'PDF to Text', desc: 'Extract all readable text from your PDF into a simple text file.', icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50', link: '/convert/txt' },
