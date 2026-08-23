@@ -5,6 +5,9 @@ import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
 import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
+import * as pdfjsLib from 'pdfjs-dist';
+// Setup PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 import { Download, Loader2, ArrowRight, Check, Share2 } from 'lucide-react';
 import { User } from '../types';
 import { logActivity, logToolAccess } from '../lib/firebase';
@@ -45,46 +48,93 @@ export default function Compress({ user }: { user: User | null }) {
     }
   });
 
+    const [progressLabel, setProgressLabel] = useState<string>('');
+
   const handleCompress = async () => {
     if (!file) return;
     setIsCompressing(true);
+    setProgress(0);
+    setProgressLabel('Initializing...');
+    
     try {
-      setProgress(10);
       const arrayBuffer = await file.arrayBuffer();
-      
-      // Simulate progress for PDF processing since pdf-lib is mostly blocking
-      const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + Math.random() * 15, 90));
-      }, 500);
-
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-      
-      // Calculate target bytes
       const targetBytes = unit === 'MB' ? targetSize * 1024 * 1024 : targetSize * 1024;
-      let options = { useObjectStreams: false };
       
-      pdfDoc.setTitle('');
-      pdfDoc.setAuthor('');
-      pdfDoc.setSubject('');
-      pdfDoc.setKeywords([]);
-      pdfDoc.setProducer('');
-      pdfDoc.setCreator('');
+      // Load PDF using PDF.js for rasterization
+      setProgressLabel('Reading PDF structure...');
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const numPages = pdf.numPages;
       
-      const pdfBytes = await pdfDoc.save(options);
-      clearInterval(progressInterval);
+      // Calculate aggressive scale and quality based on compression ratio needed
+      const ratio = targetBytes / file.size;
+      let scale = 1.5;
+      let quality = 0.8;
+      
+      if (ratio < 0.1) {
+        scale = 0.8;
+        quality = 0.4;
+      } else if (ratio < 0.3) {
+        scale = 1.0;
+        quality = 0.6;
+      } else if (ratio < 0.6) {
+        scale = 1.2;
+        quality = 0.7;
+      }
+      
+      const newPdfDoc = await PDFDocument.create();
+      
+      for (let i = 1; i <= numPages; i++) {
+        setProgress((i / numPages) * 90);
+        setProgressLabel(`Compressing page ${i} of ${numPages}...`);
+        
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale });
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) continue;
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        await page.render({ canvasContext: context, viewport } as any).promise;
+        
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+        
+        if (blob) {
+          const imageBytes = await blob.arrayBuffer();
+          const jpgImage = await newPdfDoc.embedJpg(imageBytes);
+          const pdfPage = newPdfDoc.addPage([jpgImage.width, jpgImage.height]);
+          pdfPage.drawImage(jpgImage, {
+            x: 0,
+            y: 0,
+            width: jpgImage.width,
+            height: jpgImage.height,
+          });
+        }
+        
+        // Yield to browser UI
+        await new Promise(r => setTimeout(r, 10));
+      }
+      
+      setProgressLabel('Finalizing compressed PDF...');
+      const pdfBytes = await newPdfDoc.save({ useObjectStreams: false });
       setProgress(100);
       
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const compressedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(compressedBlob);
       
       setResult({
         url,
         name: `compressed_${file.name}`,
         originalSize: file.size,
-        newSize: blob.size // Might not be significantly smaller without image downsampling
+        newSize: compressedBlob.size
       });
       
-      await saveToHistory(`compressed_${file.name}`, blob, 'compress');
+      await saveToHistory(`compressed_${file.name}`, compressedBlob, 'compress');
 
       if (user) {
         logActivity(user.uid, 'compress_pdf', { originalSize: file.size, target: `${targetSize}${unit}` });
@@ -94,6 +144,7 @@ export default function Compress({ user }: { user: User | null }) {
       toast.error("Failed to compress PDF. Please try again.");
     } finally {
       setIsCompressing(false);
+      setProgressLabel('');
     }
   };
 
@@ -153,10 +204,10 @@ export default function Compress({ user }: { user: User | null }) {
                   disabled={isCompressing}
                   className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isCompressing ? <><Loader2 className="w-5 h-5 animate-spin" /> Compressing...</> : 'Compress PDF'}
+                  {isCompressing ? <><Loader2 className="w-5 h-5 animate-spin" /> {progressLabel || 'Compressing...'}</> : 'Compress PDF'}
                 </button>
               </div>
-              <p className="text-xs text-center text-slate-400 mt-6">Note: Extreme compression requires image downsampling which is limited in the browser environment.</p>
+              <p className="text-xs text-center text-slate-400 mt-6">Note: To achieve significant file size reduction, the PDF pages are rasterized into optimized images. This removes text selectability but drastically reduces size.</p>
             </div>
           ) : (
             <div className="text-center max-w-md mx-auto">

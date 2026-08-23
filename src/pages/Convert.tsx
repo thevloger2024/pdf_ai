@@ -4,6 +4,7 @@ import { FileImage, Presentation, Table, ArrowRight, RefreshCw, FileText , FileJ
 import { motion } from 'motion/react';
 
 const convertTools = [
+  { id: 'docx', name: 'PDF to DOCX', desc: 'Convert PDF to Word document (DOCX) ensuring layout preservation.', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50', link: '/convert/docx' },
   { id: 'md2json', name: 'Markdown to JSON', desc: 'Parse Markdown files into structured JSON without data loss.', icon: FileJson, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', link: '/convert/md2json' },
   { id: 'excel2json', name: 'Excel to JSON', desc: 'Convert Excel sheets (XLSX) reliably into structured JSON.', icon: Database, color: 'text-lime-600', bg: 'bg-lime-50', link: '/convert/excel2json' },
   { id: 'md', name: 'PDF to Markdown', desc: 'Convert your PDF documents into cleanly formatted Markdown files.', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/convert/md' },

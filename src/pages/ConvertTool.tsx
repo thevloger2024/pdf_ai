@@ -17,11 +17,13 @@ import JSZip from 'jszip';
 import PptxGenJS from 'pptxgenjs';
 import * as XLSX from 'xlsx';
 import { marked } from 'marked';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 // Setup PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const types: Record<string, { name: string, ext: string, mime: string, accepted?: string }> = {
+docx: { name: 'PDF to Word', ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', accepted: '.pdf' },
   jpg: { name: 'PDF to JPG', ext: 'jpg', mime: 'image/jpeg', accepted: '.pdf' },
   png: { name: 'PDF to PNG', ext: 'png', mime: 'image/png', accepted: '.pdf' },
   excel: { name: 'PDF to Excel', ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', accepted: '.pdf' },
@@ -337,7 +339,7 @@ export default function ConvertTool({ user }: { user: User | null }) {
             
             sortedY.forEach(y => {
               // Sort items in row left to right (X ascending)
-              const rowItems = rowGroups[y].sort((a, b) => a.transform[4] - b.transform[4]);
+              const rowItems = rowGroups[y].sort((a: any, b: any) => a.transform[4] - b.transform[4]);
               sheetData.push(rowItems.map(item => item.str));
             });
 
@@ -380,6 +382,43 @@ export default function ConvertTool({ user }: { user: User | null }) {
 
           const textBlob = new Blob([fullText.trim() || 'No readable text found.'], { type: toolInfo.mime });
           await handleResult(textBlob, `${baseFilename}.${toolInfo.ext}`);
+        } else if (type === 'docx') {
+          const children = [];
+          for (let i = 1; i <= numPages; i++) {
+            setProgress(10 + (i / numPages) * 80);
+            setProgressLabel(`Processing page ${i} of ${numPages}...`);
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            
+            const rowGroups: { [y: number]: any[] } = {};
+            
+            textContent.items.forEach((item: any) => {
+              const y = Math.round(item.transform[5] / 5) * 5;
+              if (!rowGroups[y]) rowGroups[y] = [];
+              rowGroups[y].push(item);
+            });
+
+            const sortedY = Object.keys(rowGroups).map(Number).sort((a, b) => b - a);
+            
+            sortedY.forEach(y => {
+              const rowItems = rowGroups[y].sort((a, b) => a.transform[4] - b.transform[4]);
+              const text = rowItems.map((item: any) => item.str).join(' ');
+              children.push(new Paragraph({
+                children: [new TextRun(text)]
+              }));
+            });
+            children.push(new Paragraph({ text: '' }));
+          }
+
+          const doc = new Document({
+            sections: [{
+              properties: {},
+              children: children.length > 0 ? children : [new Paragraph({ text: 'No readable text found.' })],
+            }],
+          });
+
+          const docxBlob = await Packer.toBlob(doc);
+          await handleResult(docxBlob, `${baseFilename}.docx`);
         }
 
         if (user) {
