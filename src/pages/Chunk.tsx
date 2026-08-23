@@ -3,6 +3,7 @@ import SEO from '../components/SEO';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { ProgressBar } from '../components/ProgressBar';
 import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
 import { Download, Loader2, Check, Share2 } from 'lucide-react';
@@ -22,27 +23,27 @@ export default function Chunk({ user }: { user: User | null }) {
   const [pageCount, setPageCount] = useState<number>(0);
   const [pagesPerChunk, setPagesPerChunk] = useState<number>(25);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [resultUrls, setResultUrls] = useState<{url: string, name: string}[]>([]);
+  const [zipUrl, setZipUrl] = useState<string | null>(null);
 
   useKeyboardShortcuts({
     onEscape: () => {
       setFile(null);
       setResultUrls([]);
+      setZipUrl(null);
       toast('File cleared', { icon: '🧹' });
     },
     onSave: () => {
-      if (resultUrls.length > 0) {
-        resultUrls.forEach((res, index) => {
-          setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = res.url;
-            a.download = res.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          }, index * 200); // Stagger downloads
-        });
-        toast.success('Downloads started successfully!');
+      if (zipUrl && file) {
+        const a = document.createElement('a');
+        a.href = zipUrl;
+        a.download = `chunked_${file.name}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success('Downloaded archive successfully!');
       } else if (file && !isProcessing && pagesPerChunk >= 1) {
         handleChunk();
       }
@@ -65,6 +66,8 @@ export default function Chunk({ user }: { user: User | null }) {
   const handleChunk = async () => {
     if (!file || pagesPerChunk < 1) return;
     setIsProcessing(true);
+    setProgress(0);
+    setProgressLabel('Loading PDF...');
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
@@ -75,6 +78,8 @@ export default function Chunk({ user }: { user: User | null }) {
       let chunkNum = 1;
 
       while (startIdx < pageCount) {
+        setProgress((startIdx / pageCount) * 100);
+        setProgressLabel(`Creating chunk ${chunkNum}...`);
         const endIdx = Math.min(startIdx + pagesPerChunk, pageCount);
         const newPdf = await PDFDocument.create();
         const indices = Array.from({length: endIdx - startIdx}, (_, i) => startIdx + i);
@@ -98,6 +103,7 @@ export default function Chunk({ user }: { user: User | null }) {
       setResultUrls(urls);
       
       const zipBlob = await zip.generateAsync({ type: 'blob' });
+      setZipUrl(URL.createObjectURL(zipBlob));
       await saveToHistory(`chunked_${file.name}.zip`, zipBlob, 'chunk');
 
       if (user) {
@@ -181,8 +187,13 @@ export default function Chunk({ user }: { user: User | null }) {
             ))}
           </div>
 
-          <div className="flex justify-center">
-            <button onClick={() => { setFile(null); setResultUrls([]); }} className="px-8 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 transition-colors">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            {zipUrl && (
+              <a href={zipUrl} onClick={() => toast.success('Downloaded archive successfully!')} download={`chunked_${file?.name}.zip`} className="flex-1 max-w-[250px] px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex justify-center items-center gap-2">
+                <Download className="w-5 h-5" /> Download All (.zip)
+              </a>
+            )}
+            <button onClick={() => { setFile(null); setResultUrls([]); setZipUrl(null); }} className="flex-1 max-w-[250px] px-8 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 transition-colors">
               Process Another File
             </button>
           </div>

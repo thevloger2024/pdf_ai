@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { FileUploader } from '../components/FileUploader';
+import { ProgressBar } from '../components/ProgressBar';
 import { Download, Loader2, FileText, Settings, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { saveToHistory } from '../lib/storage';
@@ -16,9 +17,11 @@ export default function SplitText({ user }: { user: User | null }) {
   
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [splitMethod, setSplitMethod] = useState<'lines' | 'headers'>('lines');
   const [linesPerFile, setLinesPerFile] = useState<number>(1000);
   const [results, setResults] = useState<{name: string, url: string}[]>([]);
+  const [zipUrl, setZipUrl] = useState<string | null>(null);
 
   useEffect(() => {
     logToolAccess('split_text_' + type);
@@ -27,11 +30,13 @@ export default function SplitText({ user }: { user: User | null }) {
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
     setResults([]);
+    setZipUrl(null);
   };
 
   const processSplit = async () => {
     if (!file) return;
     setIsProcessing(true);
+    setProgress(0);
     
     try {
       const text = await file.text();
@@ -56,6 +61,10 @@ export default function SplitText({ user }: { user: User | null }) {
             fileIndex++;
           }
           currentPart = header + content;
+          if (i % 50 === 0) {
+            setProgress((i / parts.length) * 100);
+            await new Promise(r => setTimeout(r, 0));
+          } // Yield
         }
         
         if (currentPart.trim()) {
@@ -66,44 +75,52 @@ export default function SplitText({ user }: { user: User | null }) {
           });
         }
       } else {
-        // Split by lines for Text, CSV, Excel
-        const lines = text.split(/\r?\n/);
-        const hasHeader = (type === 'csv' || type === 'excel');
-        const headerLine = hasHeader && lines.length > 0 ? lines[0] : '';
-        const startIdx = hasHeader ? 1 : 0;
-        
+        // High-level improvement: avoid large array allocations for massive files by using indexOf
+        let currentIndex = 0;
         let chunkIndex = 1;
-        for (let i = startIdx; i < lines.length; i += linesPerFile) {
-          const chunkLines = lines.slice(i, i + linesPerFile);
-          if (chunkLines.length === 0 || (chunkLines.length === 1 && !chunkLines[0])) continue;
+        const hasHeader = (type === 'csv' || type === 'excel');
+        
+        let headerLine = '';
+        if (hasHeader) {
+           const firstNewline = text.indexOf('\n');
+           headerLine = firstNewline !== -1 ? text.substring(0, firstNewline) : text;
+           currentIndex = firstNewline !== -1 ? firstNewline + 1 : text.length;
+        }
+        
+        while (currentIndex < text.length) {
+          let linesCollected = 0;
+          let chunkStart = currentIndex;
+          let chunkEnd = currentIndex;
           
-          if (hasHeader) {
-            chunkLines.unshift(headerLine);
+          while (linesCollected < linesPerFile && chunkEnd < text.length) {
+             const nextNewline = text.indexOf('\n', chunkEnd);
+             if (nextNewline === -1) {
+               chunkEnd = text.length;
+               linesCollected++;
+               break;
+             }
+             chunkEnd = nextNewline + 1;
+             linesCollected++;
           }
           
-          if (type === 'excel') {
-            // Convert to Excel
-            const parsed = Papa.parse(chunkLines.join('\n'), { skipEmptyLines: true });
-            const worksheet = XLSX.utils.aoa_to_sheet(parsed.data as any[][]);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            newResults.push({
-              name: `${baseName}_part${chunkIndex}.xlsx`,
-              url: URL.createObjectURL(blob)
-            });
-          } else {
-            // CSV or TXT
-            const ext = type === 'md' ? 'md' : 'csv';
-            const content = chunkLines.join('\n');
-            const blob = new Blob([content], { type: 'text/plain' });
-            newResults.push({
-              name: `${baseName}_part${chunkIndex}.${ext}`,
-              url: URL.createObjectURL(blob)
-            });
+          if (chunkEnd > chunkStart) {
+             const chunkStr = text.substring(chunkStart, chunkEnd);
+             const finalContent = hasHeader ? headerLine + '\n' + chunkStr : chunkStr;
+             if (finalContent.trim()) {
+               const blob = new Blob([finalContent], { type: type === 'csv' ? 'text/csv' : 'text/plain' });
+               const ext = type === 'csv' ? 'csv' : (type === 'excel' ? 'csv' : 'txt');
+               newResults.push({
+                 name: `${baseName}_part${chunkIndex}.${ext}`,
+                 url: URL.createObjectURL(blob)
+               });
+               chunkIndex++;
+             }
           }
-          chunkIndex++;
+          
+          currentIndex = chunkEnd;
+          setProgress((currentIndex / text.length) * 100);
+          // Yield to UI to prevent massive files from crashing browser
+          await new Promise(r => setTimeout(r, 0));
         }
       }
       
@@ -128,15 +145,15 @@ export default function SplitText({ user }: { user: User | null }) {
   };
 
   const downloadAll = () => {
-    results.forEach(res => {
+    if (zipUrl && file) {
       const a = document.createElement('a');
-      a.href = res.url;
-      a.download = res.name;
+      a.href = zipUrl;
+      a.download = `split_${file.name}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    });
-    toast.success('Downloads started!');
+      toast.success('Downloaded archive successfully!');
+    }
   };
 
   return (
@@ -206,13 +223,18 @@ export default function SplitText({ user }: { user: User | null }) {
               {isProcessing ? 'Processing...' : 'Split File'}
             </button>
           </div>
+          {isProcessing && (
+            <div className="mt-6">
+              <ProgressBar progress={progress} label="Processing file..." />
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-sm max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200">Generated Files ({results.length})</h2>
             <button onClick={downloadAll} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> Download All
+              <Download className="w-4 h-4" /> Download All (.zip)
             </button>
           </div>
           
@@ -228,7 +250,7 @@ export default function SplitText({ user }: { user: User | null }) {
           </div>
           
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
-            <button onClick={() => {setFile(null); setResults([]);}} className="text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center justify-center gap-2 mx-auto">
+            <button onClick={() => {setFile(null); setResults([]); setZipUrl(null);}} className="text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center justify-center gap-2 mx-auto">
               <ArrowLeft className="w-4 h-4" /> Split Another File
             </button>
           </div>

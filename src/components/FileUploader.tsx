@@ -69,7 +69,14 @@ export function FileUploader({
         const file = e.dataTransfer.files[0];
         const ext = file.name.split('.').pop()?.toLowerCase();
         
-        if (accept.includes(file.type) || (accept.includes('.pdf') && ext === 'pdf') || (accept.includes(`.${ext}`))) {
+        // High-level improvement: robust checking for file extensions and mime types, ensuring no valid file is rejected
+        const isAccepted = 
+          !accept || accept === '*' ||
+          (file.type && accept.includes(file.type)) || 
+          (ext && accept.includes('.' + ext)) ||
+          (accept.includes('.pdf') && ext === 'pdf');
+        
+        if (isAccepted) {
           toast.success(`File uploaded successfully: ${file.name}`);
           onFileSelect(file);
         } else {

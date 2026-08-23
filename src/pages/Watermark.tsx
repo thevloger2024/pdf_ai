@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import SEO from '../components/SEO';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { ProgressBar } from '../components/ProgressBar';
 import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Download, Loader2, Check, Share2, Droplets } from 'lucide-react';
@@ -44,6 +45,8 @@ export default function Watermark({ user }: { user: User | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
   // Watermark Options
@@ -99,7 +102,10 @@ export default function Watermark({ user }: { user: User | null }) {
 
       const pages = pdfDoc.getPages();
 
-      for (const pageIndex of pagesToWatermark) {
+      for (let i = 0; i < pagesToWatermark.length; i++) {
+        const pageIndex = pagesToWatermark[i];
+        setProgress((i / pagesToWatermark.length) * 100);
+        setProgressLabel(`Processing page ${i + 1} of ${pagesToWatermark.length}...`);
         if (pageIndex >= pages.length) continue;
         const page = pages[pageIndex];
         const { width, height } = page.getSize();

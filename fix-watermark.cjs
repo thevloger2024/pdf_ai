@@ -1,5 +1,5 @@
 const fs = require('fs');
-let text = fs.readFileSync('src/pages/SplitPdf.tsx', 'utf8');
+let text = fs.readFileSync('src/pages/Watermark.tsx', 'utf8');
 
 if (!text.includes('ProgressBar')) {
   text = text.replace(
@@ -17,25 +17,16 @@ if (!text.includes('const [progress, setProgress]')) {
 
 text = text.replace(
   "setIsProcessing(true);\n    try {",
-  "setIsProcessing(true);\n    setProgress(0);\n    setProgressLabel('Extracting pages...');\n    try {"
+  "setIsProcessing(true);\n    setProgress(0);\n    setProgressLabel('Starting watermark...');\n    try {"
 );
 
-text = text.replace(
-  "const newPdf = await PDFDocument.create();",
-  "setProgress(30);\n      const newPdf = await PDFDocument.create();"
-);
-text = text.replace(
-  "const copiedPages = await newPdf.copyPages(pdfDoc, orderedSelectedPages.map(p => p - 1));",
-  "setProgress(60);\n      const copiedPages = await newPdf.copyPages(pdfDoc, orderedSelectedPages.map(p => p - 1));"
-);
-text = text.replace(
-  "const pdfBytes = await newPdf.save();",
-  "setProgress(90);\n      setProgressLabel('Saving PDF...');\n      const pdfBytes = await newPdf.save();"
-);
+const loopOld = "for (const pageIndex of pagesToWatermark) {";
+const loopNew = "for (let i = 0; i < pagesToWatermark.length; i++) {\n        const pageIndex = pagesToWatermark[i];\n        setProgress((i / pagesToWatermark.length) * 100);\n        setProgressLabel(`Processing page ${i + 1} of ${pagesToWatermark.length}...`);";
+text = text.replace(loopOld, loopNew);
 
 text = text.replace(
   "</button>\n              </div>\n            </div>",
   "</button>\n              </div>\n              {isProcessing && (\n                <div className=\"mt-6\">\n                  <ProgressBar progress={progress} label={progressLabel} />\n                </div>\n              )}\n            </div>"
 );
 
-fs.writeFileSync('src/pages/SplitPdf.tsx', text, 'utf8');
+fs.writeFileSync('src/pages/Watermark.tsx', text, 'utf8');

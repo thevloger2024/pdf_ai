@@ -43,6 +43,8 @@ function SortableFileItem({ id, file, onRemove }: { id: string, file: File, onRe
 export default function MergePdfs({ user }: { user: User | null }) {
   const [files, setFiles] = useState<{id: string, file: File}[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultName, setResultName] = useState<string>('merged.pdf');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,10 +90,15 @@ export default function MergePdfs({ user }: { user: User | null }) {
     }
 
     setIsProcessing(true);
+    setProgress(0);
+    setProgressLabel('Starting merge...');
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const item of files) {
+      for (let i = 0; i < files.length; i++) {
+        const item = files[i];
+        setProgress((i / files.length) * 100);
+        setProgressLabel(`Merging file ${i + 1} of ${files.length}...`);
         const arrayBuffer = await item.file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());

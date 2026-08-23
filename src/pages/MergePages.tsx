@@ -63,6 +63,8 @@ function SortablePageItem({ id, item, onRemove, onRangeChange }: { id: string, i
 export default function MergePages({ user }: { user: User | null }) {
   const [files, setFiles] = useState<FileWithPages[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultName, setResultName] = useState<string>('merged_pages.pdf');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,10 +146,15 @@ export default function MergePages({ user }: { user: User | null }) {
     }
 
     setIsProcessing(true);
+    setProgress(0);
+    setProgressLabel('Starting merge...');
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const item of files) {
+      for (let i = 0; i < files.length; i++) {
+        const item = files[i];
+        setProgress((i / files.length) * 100);
+        setProgressLabel(`Processing file ${i + 1} of ${files.length}...`);
         const arrayBuffer = await item.file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         const totalPages = pdfDoc.getPageCount();

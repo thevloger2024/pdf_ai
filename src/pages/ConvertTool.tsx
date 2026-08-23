@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { FileUploader } from '../components/FileUploader';
+import { ProgressBar } from '../components/ProgressBar';
 import { Download, Loader2, RefreshCw, Share2 } from 'lucide-react';
 import { User } from '../types';
 import { logActivity, logToolAccess } from '../lib/firebase';
@@ -41,6 +42,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
   }, [type]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [progressLabel, setProgressLabel] = useState<string>('');
   const [result, setResult] = useState<{ url: string, name: string } | null>(null);
 
   useKeyboardShortcuts({
@@ -78,6 +81,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
   const handleConvert = async () => {
     if (!file) return;
     setIsProcessing(true);
+    setProgress(0);
+    setProgressLabel('Reading file...');
     setResult(null);
 
     try {
@@ -102,18 +107,64 @@ export default function ConvertTool({ user }: { user: User | null }) {
         const textDecoder = new TextDecoder('utf-8');
         const mdText = textDecoder.decode(arrayBuffer);
         
-        // Use marked.lexer to generate a full AST (Abstract Syntax Tree) without losing any data
-        const tokens = marked.lexer(mdText);
+        // High-level: Process massive markdown files in chunks to avoid UI freezing and memory limits
+        const chunkSize = 1024 * 1024 * 2; // 2MB string chunks
         
-        const jsonBlob = new Blob([JSON.stringify(tokens, null, 2)], { type: toolInfo.mime });
-        await handleResult(jsonBlob, `${baseFilename}.json`);
+        if (mdText.length > chunkSize) {
+          const blobParts = ['[\n'];
+          let startIndex = 0;
+          let isFirst = true;
+          
+          while (startIndex < mdText.length) {
+            setProgress(10 + (startIndex / mdText.length) * 80);
+            setProgressLabel(`Processing chunk...`);
+            let endIndex = startIndex + chunkSize;
+            if (endIndex < mdText.length) {
+               const nextNewline = mdText.indexOf('\n\n', endIndex);
+               if (nextNewline !== -1 && nextNewline - endIndex < 500000) {
+                 endIndex = nextNewline + 2;
+               }
+            } else {
+               endIndex = mdText.length;
+            }
+            
+            const chunk = mdText.substring(startIndex, endIndex);
+            const tokens = marked.lexer(chunk);
+            
+            let jsonString = JSON.stringify(tokens, null, 2).trim();
+            if (jsonString.startsWith('[')) jsonString = jsonString.substring(1);
+            if (jsonString.endsWith(']')) jsonString = jsonString.substring(0, jsonString.length - 1);
+            
+            if (jsonString.trim().length > 0) {
+               if (!isFirst) blobParts.push(',\n');
+               blobParts.push(jsonString);
+               isFirst = false;
+            }
+            
+            startIndex = endIndex;
+            // Yield to main thread to prevent UI freeze (High-level non-blocking processing)
+            await new Promise(r => setTimeout(r, 10));
+          }
+          
+          blobParts.push('\n]');
+          const jsonBlob = new Blob(blobParts, { type: toolInfo.mime });
+          await handleResult(jsonBlob, `${baseFilename}.json`);
+        } else {
+          const tokens = marked.lexer(mdText);
+          const jsonBlob = new Blob([JSON.stringify(tokens, null, 2)], { type: toolInfo.mime });
+          await handleResult(jsonBlob, `${baseFilename}.json`);
+        }
         
       } else if (type === 'excel2md') {
         // Handle Excel to Markdown
         const wb = XLSX.read(arrayBuffer, { type: 'array' });
         let mdText = `# ${baseFilename}\n\n`;
         
-        wb.SheetNames.forEach(sheetName => {
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          setProgress(10 + (i / wb.SheetNames.length) * 80);
+          setProgressLabel(`Converting sheet ${i + 1} of ${wb.SheetNames.length}...`);
+          
           const ws = wb.Sheets[sheetName];
           const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
           
@@ -133,7 +184,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
             }
             mdText += '\n\n';
           }
-        });
+          await new Promise(r => setTimeout(r, 10)); // Yield to UI
+        }
         
         const textBlob = new Blob([mdText.trim() || 'No data found.'], { type: toolInfo.mime });
         await handleResult(textBlob, `${baseFilename}.md`);
@@ -151,6 +203,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
           let singleBlob: Blob | null = null;
 
           for (let i = 1; i <= numPages; i++) {
+            setProgress(10 + (i / numPages) * 80);
+            setProgressLabel(`Processing page ${i} of ${numPages}...`);
             const page = await pdf.getPage(i);
             const viewport = page.getViewport({ scale: 2.0 }); // High quality scale
             const canvas = document.createElement('canvas');
@@ -189,6 +243,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
           const pptx = new PptxGenJS();
           
           for (let i = 1; i <= numPages; i++) {
+            setProgress(10 + (i / numPages) * 80);
+            setProgressLabel(`Processing page ${i} of ${numPages}...`);
             const page = await pdf.getPage(i);
             const viewport = page.getViewport({ scale: 2.0 });
             const canvas = document.createElement('canvas');
@@ -214,6 +270,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
           const wb = XLSX.utils.book_new();
 
           for (let i = 1; i <= numPages; i++) {
+            setProgress(10 + (i / numPages) * 80);
+            setProgressLabel(`Processing page ${i} of ${numPages}...`);
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             
@@ -248,6 +306,8 @@ export default function ConvertTool({ user }: { user: User | null }) {
           let fullText = '';
           
           for (let i = 1; i <= numPages; i++) {
+            setProgress(10 + (i / numPages) * 80);
+            setProgressLabel(`Processing page ${i} of ${numPages}...`);
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             
@@ -324,6 +384,12 @@ export default function ConvertTool({ user }: { user: User | null }) {
                   {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> Converting...</> : 'Convert Now'}
                 </button>
               </div>
+              
+              {isProcessing && (
+                <div className="mt-6 text-left">
+                  <ProgressBar progress={progress} label={progressLabel} />
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center max-w-md mx-auto">

@@ -7,6 +7,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStr
 import { CSS } from '@dnd-kit/utilities';
 import { GripHorizontal } from 'lucide-react';
 import { FileUploader } from '../components/FileUploader';
+import { ProgressBar } from '../components/ProgressBar';
 import { PDFPreview } from '../components/PDFPreview';
 import { PDFDocument } from 'pdf-lib';
 import { Download, Loader2, Check, Share2 } from 'lucide-react';
@@ -59,6 +60,8 @@ export default function SplitPdf({ user }: { user: User | null }) {
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [previewPage, setPreviewPage] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
   useKeyboardShortcuts({
@@ -125,15 +128,21 @@ export default function SplitPdf({ user }: { user: User | null }) {
   const handleExtract = async () => {
     if (!file || selectedPages.length === 0) return;
     setIsProcessing(true);
+    setProgress(0);
+    setProgressLabel('Extracting pages...');
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
+      setProgress(30);
       const newPdf = await PDFDocument.create();
       
       const orderedSelectedPages = pagesOrder.map(Number).filter(p => selectedPages.includes(p));
+      setProgress(60);
       const copiedPages = await newPdf.copyPages(pdfDoc, orderedSelectedPages.map(p => p - 1));
       copiedPages.forEach(page => newPdf.addPage(page));
       
+      setProgress(90);
+      setProgressLabel('Saving PDF...');
       const pdfBytes = await newPdf.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       setResultUrl(URL.createObjectURL(blob));
