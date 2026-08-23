@@ -30,7 +30,12 @@ const types: Record<string, { name: string, ext: string, mime: string, accepted?
   md: { name: 'PDF to Markdown', ext: 'md', mime: 'text/markdown', accepted: '.pdf' },
   excel2md: { name: 'Excel to Markdown', ext: 'md', mime: 'text/markdown', accepted: '.xlsx,.xls' },
   md2json: { name: 'Markdown to JSON', ext: 'json', mime: 'application/json', accepted: '.md,.markdown' },
-  excel2json: { name: 'Excel to JSON', ext: 'json', mime: 'application/json', accepted: '.xlsx,.xls,.csv' }
+  excel2json: { name: 'Excel to JSON', ext: 'json', mime: 'application/json', accepted: '.xlsx,.xls,.csv' },
+  md2html: { name: 'Markdown to HTML', ext: 'html', mime: 'text/html', accepted: '.md,.markdown' },
+  md2js: { name: 'Markdown to JavaScript', ext: 'js', mime: 'text/javascript', accepted: '.md,.markdown' },
+  md2py: { name: 'Markdown to Python', ext: 'py', mime: 'text/x-python', accepted: '.md,.markdown' },
+  json2js: { name: 'JSON to JavaScript', ext: 'js', mime: 'text/javascript', accepted: '.json' },
+  json2py: { name: 'JSON to Python', ext: 'py', mime: 'text/x-python', accepted: '.json' }
 };
 
 export default function ConvertTool({ user }: { user: User | null }) {
@@ -155,6 +160,47 @@ export default function ConvertTool({ user }: { user: User | null }) {
           await handleResult(jsonBlob, `${baseFilename}.json`);
         }
         
+      } else if (type === 'md2html') {
+        const textDecoder = new TextDecoder('utf-8');
+        const mdText = textDecoder.decode(arrayBuffer);
+        const html = await marked.parse(mdText);
+        const htmlBlob = new Blob([html], { type: toolInfo.mime });
+        await handleResult(htmlBlob, `${baseFilename}.html`);
+        
+      } else if (type === 'md2js') {
+        const textDecoder = new TextDecoder('utf-8');
+        const mdText = textDecoder.decode(arrayBuffer);
+        const escaped = mdText.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        const jsText = `export const markdownContent = \`${escaped}\`;\n`;
+        const jsBlob = new Blob([jsText], { type: toolInfo.mime });
+        await handleResult(jsBlob, `${baseFilename}.js`);
+
+      } else if (type === 'md2py') {
+        const textDecoder = new TextDecoder('utf-8');
+        const mdText = textDecoder.decode(arrayBuffer);
+        const escaped = mdText.replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"');
+        const pyText = `markdown_content = """\n${escaped}\n"""\n`;
+        const pyBlob = new Blob([pyText], { type: toolInfo.mime });
+        await handleResult(pyBlob, `${baseFilename}.py`);
+
+      } else if (type === 'json2js') {
+        const textDecoder = new TextDecoder('utf-8');
+        const jsonText = textDecoder.decode(arrayBuffer);
+        JSON.parse(jsonText); // validate JSON
+        const jsText = `export default ${jsonText};\n`;
+        const jsBlob = new Blob([jsText], { type: toolInfo.mime });
+        await handleResult(jsBlob, `${baseFilename}.js`);
+
+      } else if (type === 'json2py') {
+        const textDecoder = new TextDecoder('utf-8');
+        const jsonText = textDecoder.decode(arrayBuffer);
+        JSON.parse(jsonText); // validate JSON
+        // Basic mapping for Python dict
+        const pyStr = jsonText.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None');
+        const pyText = `data = ${pyStr}\n`;
+        const pyBlob = new Blob([pyText], { type: toolInfo.mime });
+        await handleResult(pyBlob, `${baseFilename}.py`);
+
       } else if (type === 'excel2md') {
         // Handle Excel to Markdown
         const wb = XLSX.read(arrayBuffer, { type: 'array' });

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { FileImage, Presentation, Table, ArrowRight, RefreshCw, FileText , FileJson, Database} from 'lucide-react';
+import { FileImage, Presentation, Table, ArrowRight, RefreshCw, FileText , FileJson, Database, Code, Globe, FileCode } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const convertTools = [
@@ -13,6 +13,11 @@ const convertTools = [
   { id: 'png', name: 'PDF to PNG', desc: 'Convert PDF pages into transparent, high-res PNG images.', icon: FileImage, color: 'text-pink-600', bg: 'bg-pink-50', link: '/convert/png' },
   { id: 'excel', name: 'PDF to Excel', desc: 'Extract tabular data and text into structured Excel (XLSX) format.', icon: Table, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/convert/excel' },
   { id: 'ppt', name: 'PDF to PowerPoint', desc: 'Turn your PDF pages into presentation slides effortlessly.', icon: Presentation, color: 'text-rose-600', bg: 'bg-rose-50', link: '/convert/ppt' },
+  { id: 'md2html', name: 'Markdown to HTML', desc: 'Convert Markdown to clean, semantic HTML code.', icon: Globe, color: 'text-orange-500', bg: 'bg-orange-50', link: '/convert/md2html' },
+  { id: 'md2js', name: 'Markdown to JavaScript', desc: 'Export Markdown content as a JavaScript file.', icon: Code, color: 'text-yellow-600', bg: 'bg-yellow-50', link: '/convert/md2js' },
+  { id: 'md2py', name: 'Markdown to Python', desc: 'Convert Markdown to a Python file.', icon: FileCode, color: 'text-blue-600', bg: 'bg-blue-50', link: '/convert/md2py' },
+  { id: 'json2js', name: 'JSON to JavaScript', desc: 'Convert JSON data into a JavaScript module.', icon: Code, color: 'text-yellow-500', bg: 'bg-yellow-50', link: '/convert/json2js' },
+  { id: 'json2py', name: 'JSON to Python', desc: 'Convert JSON data into a Python dictionary script.', icon: FileCode, color: 'text-blue-500', bg: 'bg-blue-50', link: '/convert/json2py' },
 ];
 
 export default function Convert() {
